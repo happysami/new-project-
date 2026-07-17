@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StoreFlow ERP</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.9/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  </head>
+  <body>
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+    </div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-icon">SF</div>
+          <div>
+            <h1>StoreFlow</h1>
+            <p>ERP Suite</p>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-item active" data-section="dashboard">Dashboard</button>
+          <button class="nav-item" data-section="products">Products</button>
+          <button class="nav-item" data-section="stock">Stock Entry</button>
+          <button class="nav-item" data-section="inventory">Inventory</button>
+          <button class="nav-item" data-section="sales">Sales</button>
+          <button class="nav-item" data-section="payments">Payments</button>
+          <button class="nav-item" data-section="customers">Customers</button>
+          <button class="nav-item" data-section="suppliers">Suppliers</button>
+          <button class="nav-item" data-section="salesmen">Salesmen</button>
+          <button class="nav-item" data-section="expenses">Expenses & Income</button>
+          <button class="nav-item" data-section="reports">Reports</button>
+          <button class="nav-item" data-section="activity">Activity</button>
+        </nav>
+      </aside>
+
+      <main class="main-panel">
+        <header class="topbar">
+          <div class="search-wrap">
+            <input id="globalSearch" placeholder="Global search product, invoice, customer, supplier, salesman or phone" />
+          </div>
+          <div class="topbar-actions">
+            <span id="onlineStatus" class="online-status">🟢 Online</span>
+            <button class="icon-btn" id="themeToggle">☀️</button>
+            <button class="icon-btn" id="notificationsBtn">🔔 <span id="notifCount">0</span></button>
+            <button class="primary-btn" id="quickSaleBtn">New Sale</button>
+            <div class="user-pill" id="userBadge">Admin</div>
+          </div>
+        </header>
+
+        <section class="content-section active" id="dashboard">
+          <div class="section-head">
+            <div>
+              <h2>Executive Dashboard</h2>
+              <p>Live inventory, sales, financial and operational overview.</p>
+            </div>
+            <div class="section-actions">
+              <button class="secondary-btn" id="refreshDataBtn">Refresh</button>
+            </div>
+          </div>
+          <div id="dashboardMetrics" class="cards-grid"></div>
+          <div class="chart-grid">
+            <div class="panel"><canvas id="revenueChart"></canvas></div>
+            <div class="panel"><canvas id="profitChart"></canvas></div>
+            <div class="panel"><canvas id="inventoryChart"></canvas></div>
+            <div class="panel"><canvas id="paymentChart"></canvas></div>
+            <div class="panel"><canvas id="categoryChart"></canvas></div>
+          </div>
+          <div class="detail-grid">
+            <div class="panel">
+              <h3>Low Stock & Out of Stock</h3>
+              <div id="stockAlerts"></div>
+            </div>
+            <div class="panel">
+              <h3>Top Products</h3>
+              <div id="topProducts"></div>
+            </div>
+            <div class="panel">
+              <h3>Notifications</h3>
+              <div id="notificationList"></div>
+            </div>
+            <div class="panel">
+              <h3>Top Customers & Salesmen</h3>
+              <div id="peopleSummary"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="content-section" id="products">
+          <div class="section-head">
+            <div>
+              <h2>Product Management</h2>
+              <p>Create, edit and manage product catalog and pricing.</p>
+            </div>
+            <div class="section-actions">
+              <button class="primary-btn" id="addProductBtn">Add Product</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="table-toolbar">
+              <input id="productSearch" placeholder="Search products" />
+              <button class="secondary-btn" id="exportProductsBtn">Export</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Name</th><th>Category</th><th>Purchase</th><th>Selling</th><th>Qty</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="productsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="content-section" id="stock">
+          <div class="section-head">
+            <div>
+              <h2>Stock Entry</h2>
+              <p>Record purchasing activity and increase inventory instantly.</p>
+            </div>
+          </div>
+          <div class="panel">
+            <form id="stockForm" class="stacked-form"></form>
+          </div>
+          <div class="panel">
+            <h3>Inventory History</h3>
+            <table>
+              <thead><tr><th>Date</th><th>Product</th><th>Action</th><th>Quantity</th><th>Balance</th><th>Remarks</th></tr></thead>
+              <tbody id="stockHistoryBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="content-section" id="inventory">
+          <div class="section-head">
+            <div>
+              <h2>Inventory Management</h2>
+              <p>Track stock, stock value, movement and valuation.</p>
+            </div>
+            <div class="section-actions">
+              <button class="secondary-btn" id="exportInventoryBtn">Export</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="table-toolbar">
+              <input id="inventorySearch" placeholder="Search inventory" />
+              <select id="inventoryFilter"><option value="all">All</option><option value="low">Low stock</option><option value="out">Out of stock</option></select>
+              <button class="secondary-btn" id="printInventoryBtn">Print</button>
+            </div>
+            <table>
+              <thead><tr><th>Product</th><th>Category</th><th>Purchase</th><th>Selling</th><th>Stock</th><th>Remaining</th><th>Value</th><th>Status</th></tr></thead>
+              <tbody id="inventoryTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="content-section" id="sales">
+          <div class="section-head">
+            <div>
+              <h2>Sales Management</h2>
+              <p>Create sales, manage status, calculate profits and pending payments.</p>
+            </div>
+            <div class="section-actions">
+              <button class="primary-btn" id="newSaleBtn">Create Sale</button>
+            </div>
+          </div>
+          <div class="panel">
+            <form id="saleForm" class="stacked-form"></form>
+          </div>
+          <div class="panel">
+            <h3>Sales Ledger</h3>
+            <table>
+              <thead><tr><th>Invoice</th><th>Customer</th><th>Salesman</th><th>Status</th><th>Total</th><th>Profit</th><th>Action</th></tr></thead>
+              <tbody id="salesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="content-section" id="payments">
+          <div class="section-head">
+            <div>
+              <h2>Payment Management</h2>
+              <p>Track cash, bank, mobile money and pending collections.</p>
+            </div>
+          </div>
+          <div class="cards-grid small-cards" id="paymentSummaryCards"></div>
+          <div class="detail-grid">
+            <div class="panel">
+              <h3>Pending Payments</h3>
+              <table>
+                <thead><tr><th>Invoice</th><th>Customer</th><th>Pending</th><th>Expected</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody id="pendingPaymentsBody"></tbody>
+              </table>
+            </div>
+            <div class="panel">
+              <h3>Payment History</h3>
+              <table>
+                <thead><tr><th>Date</th><th>Invoice</th><th>Method</th><th>Amount</th><th>Remarks</th></tr></thead>
+                <tbody id="paymentsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="content-section" id="customers">
+          <div class="section-head">
+            <div><h2>Customer Management</h2><p>Maintain customer accounts, balances and history.</p></div>
+            <div class="section-actions"><button class="primary-btn" id="addCustomerBtn">Add Customer</button></div>
+          </div>
+          <div class="panel"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Balance</th><th>Credit Limit</th><th>Actions</th></tr></thead><tbody id="customersTableBody"></tbody></table></div>
+        </section>
+
+        <section class="content-section" id="suppliers">
+          <div class="section-head">
+            <div><h2>Supplier Management</h2><p>Manage supplier details, outstanding balances and invoices.</p></div>
+            <div class="section-actions"><button class="primary-btn" id="addSupplierBtn">Add Supplier</button></div>
+          </div>
+          <div class="panel"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Balance</th><th>Actions</th></tr></thead><tbody id="suppliersTableBody"></tbody></table></div>
+        </section>
+
+        <section class="content-section" id="salesmen">
+          <div class="section-head">
+            <div><h2>Salesman Management</h2><p>Track staff sales performance and commissions.</p></div>
+            <div class="section-actions"><button class="primary-btn" id="addSalesmanBtn">Add Salesman</button></div>
+          </div>
+          <div class="panel"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Sales</th><th>Commission</th><th>Actions</th></tr></thead><tbody id="salesmenTableBody"></tbody></table></div>
+        </section>
+
+        <section class="content-section" id="expenses">
+          <div class="section-head">
+            <div><h2>Expenses & Other Income</h2><p>Track all operating costs and additional income automatically.</p></div>
+            <div class="section-actions"><button class="primary-btn" id="addExpenseBtn">Add Expense</button><button class="secondary-btn" id="addIncomeBtn">Add Income</button></div>
+          </div>
+          <div class="detail-grid">
+            <div class="panel"><h3>Expenses</h3><table><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Remarks</th><th>Actions</th></tr></thead><tbody id="expensesTableBody"></tbody></table></div>
+            <div class="panel"><h3>Income</h3><table><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Remarks</th><th>Actions</th></tr></thead><tbody id="incomeTableBody"></tbody></table></div>
+          </div>
+        </section>
+
+        <section class="content-section" id="reports">
+          <div class="section-head">
+            <div><h2>Reports</h2><p>Export financial, sales, inventory and customer reports.</p></div>
+            <div class="section-actions">
+              <button class="secondary-btn" id="exportAllBtn">Export All</button>
+              <button class="secondary-btn" id="backupBtn">Backup Data</button>
+              <label class="secondary-btn" style="cursor:pointer"><input type="file" id="restoreInput" accept=".json" style="display:none" onchange="restoreData(this.files[0])"/>Restore Backup</label>
+            </div>
+          </div>
+          <div class="panel" id="reportsPanel"></div>
+        </section>
+
+        <section class="content-section" id="activity">
+          <div class="section-head">
+            <div><h2>Activity Log</h2><p>Every action is recorded for audit and review.</p></div>
+          </div>
+          <div class="panel"><table><thead><tr><th>Date</th><th>User</th><th>Action</th><th>Details</th></tr></thead><tbody id="activityTableBody"></tbody></table></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal hidden" id="modal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="modalTitle">Modal</h3>
+          <button class="icon-btn" id="closeModalBtn">✕</button>
+        </div>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="auth-card hidden" id="authCard">
+      <h2>StoreFlow ERP</h2>
+      <p>Secure access for store operations</p>
+      <form id="authForm" class="stacked-form">
+        <input type="email" id="authEmail" placeholder="Email" value="admin@storeflow.com" required />
+        <input type="password" id="authPassword" placeholder="Password" value="admin123" required />
+        <button class="primary-btn" type="submit">Sign In</button>
+      </form>
+      <small>Demo admin credential is active by default.</small>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
