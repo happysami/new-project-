@@ -25,11 +25,94 @@
           <h1>Payment Management</h1>
           <a href="../../dashboard.html">Back</a>
         </header>
-        <section class="panel">
-          <h3>Payments</h3>
-          <p>This section will host pending payment, cash summary, bank summary and reconciliation.</p>
+        
+        <section class="payments-tabs">
+          <button class="tab-btn active" data-tab="pending">Pending Payments</button>
+          <button class="tab-btn" data-tab="cash">Cash Summary</button>
+          <button class="tab-btn" data-tab="bank">Bank Summary</button>
+        </section>
+
+        <!-- Pending Payments Tab -->
+        <section id="pending-tab" class="tab-content active">
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="stat-label">Total Pending</span>
+              <span class="stat-value" id="total-pending">ETB 0</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Waiting Count</span>
+              <span class="stat-value" id="waiting-count">0</span>
+            </div>
+            <div class="stat-card warning">
+              <span class="stat-label">Overdue</span>
+              <span class="stat-value" id="overdue-count">0</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Pending Payment Records</h3>
+              <div class="filter-group">
+                <select id="status-filter">
+                  <option value="">All Status</option>
+                  <option value="waiting">Waiting</option>
+                  <option value="paid">Paid</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+            <table class="data-table" id="pending-table">
+              <thead>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Customer</th>
+                  <th>Expected Date</th>
+                  <th>Amount</th>
+                  <th>Salesman</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="pending-tbody">
+                <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Cash Summary Tab -->
+        <section id="cash-tab" class="tab-content">
+          <div class="panel">
+            <h3>Cash Payment Summary</h3>
+            <p class="placeholder-text">Cash summary reports coming soon.</p>
+          </div>
+        </section>
+
+        <!-- Bank Summary Tab -->
+        <section id="bank-tab" class="tab-content">
+          <div class="panel">
+            <h3>Bank Transfer Summary</h3>
+            <p class="placeholder-text">Bank summary reports coming soon.</p>
+          </div>
         </section>
       </main>
     </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="modal">
+      <div class="modal-content">
+        <h3 id="modal-title">Confirm Action</h3>
+        <p id="modal-message"></p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" id="modal-confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="../../js/payments/payments.js"></script>
   </body>
 </html>
