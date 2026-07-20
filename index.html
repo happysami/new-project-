@@ -37,7 +37,6 @@
           <button class="nav-item" data-section="inventory">Inventory</button>
           <button class="nav-item" data-section="sales">Sales</button>
           <button class="nav-item" data-section="payments">Payments</button>
-          <button class="nav-item" data-section="customers">Customers</button>
           <button class="nav-item" data-section="suppliers">Suppliers</button>
           <button class="nav-item" data-section="salesmen">Salesmen</button>
           <button class="nav-item" data-section="reports">Reports</button>
@@ -48,7 +47,7 @@
       <main class="main-panel">
         <header class="topbar">
           <div class="search-wrap">
-            <input id="globalSearch" placeholder="Global search product, invoice, customer, supplier, salesman or phone" />
+            <input id="globalSearch" placeholder="Global search product, invoice, supplier, salesman or phone" />
           </div>
           <div class="topbar-actions">
             <span id="onlineStatus" class="online-status">🟢 Online</span>
@@ -91,7 +90,7 @@
               <div id="notificationList"></div>
             </div>
             <div class="panel">
-              <h3>Top Customers & Salesmen</h3>
+              <h3>Top Salesmen</h3>
               <div id="peopleSummary"></div>
             </div>
           </div>
@@ -181,7 +180,7 @@
           <div class="panel">
             <h3>Sales Ledger</h3>
             <table>
-              <thead><tr><th>Invoice</th><th>Customer</th><th>Salesman</th><th>Status</th><th>Total</th><th>Profit</th><th>Action</th></tr></thead>
+              <thead><tr><th>Invoice</th><th>Salesman</th><th>Status</th><th>Total</th><th>Profit</th><th>Action</th></tr></thead>
               <tbody id="salesTableBody"></tbody>
             </table>
           </div>
@@ -199,7 +198,7 @@
             <div class="panel">
               <h3>Pending Payments</h3>
               <table>
-                <thead><tr><th>Invoice</th><th>Customer</th><th>Pending</th><th>Expected</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Invoice</th><th>Pending</th><th>Expected</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody id="pendingPaymentsBody"></tbody>
               </table>
             </div>
@@ -211,14 +210,6 @@
               </table>
             </div>
           </div>
-        </section>
-
-        <section class="content-section" id="customers">
-          <div class="section-head">
-            <div><h2>Customer Management</h2><p>Maintain customer accounts, balances and history.</p></div>
-            <div class="section-actions"><button class="primary-btn" id="addCustomerBtn">Add Customer</button></div>
-          </div>
-          <div class="panel"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th>Balance</th><th>Credit Limit</th><th>Actions</th></tr></thead><tbody id="customersTableBody"></tbody></table></div>
         </section>
 
         <section class="content-section" id="suppliers">
@@ -239,7 +230,7 @@
 
         <section class="content-section" id="reports">
           <div class="section-head">
-            <div><h2>Reports</h2><p>Export financial, sales, inventory and customer reports.</p></div>
+            <div><h2>Reports</h2><p>Export financial, sales, and inventory reports.</p></div>
             <div class="section-actions">
               <button class="secondary-btn" id="exportAllBtn">Export All</button>
               <button class="secondary-btn" id="backupBtn">Backup Data</button>
