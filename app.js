@@ -8,12 +8,12 @@ let firebaseDb = null;
 let firebaseAuth = null;
 
 const rolePermissions = {
-  admin: ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'customers', 'suppliers', 'salesmen', 'expenses', 'reports', 'activity'],
-  'store manager': ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'customers', 'suppliers', 'salesmen', 'expenses', 'reports', 'activity'],
+  admin: ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'customers', 'suppliers', 'salesmen', 'reports', 'activity'],
+  'store manager': ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'customers', 'suppliers', 'salesmen', 'reports', 'activity'],
   'sales manager': ['dashboard', 'products', 'inventory', 'sales', 'payments', 'customers', 'salesmen', 'reports', 'activity'],
   salesman: ['dashboard', 'sales', 'customers', 'inventory', 'reports'],
   cashier: ['dashboard', 'sales', 'payments', 'inventory', 'reports'],
-  accountant: ['dashboard', 'payments', 'expenses', 'reports', 'activity'],
+  accountant: ['dashboard', 'payments', 'reports', 'activity'],
   viewer: ['dashboard', 'inventory', 'reports', 'activity']
 };
 
@@ -141,8 +141,6 @@ function seedState() {
     saleItems: [{ saleId: 'INV001', productId: 'P001', quantity: 10, unitPrice: 120, lineTotal: 1200 }, { saleId: 'INV002', productId: 'P002', quantity: 1, unitPrice: 1200, lineTotal: 1200 }],
     payments: [{ id: 'PAY1', invoiceNumber: 'INV001', amount: 1380, method: 'Cash', date: '2026-07-01', remarks: 'Sale settled' }, { id: 'PAY2', invoiceNumber: 'INV002', amount: 500, method: 'CBE', date: '2026-07-03', remarks: 'Part payment' }],
     pendingPayments: [{ id: 'PP1', pid: 'PID001', invoiceNumber: 'INV002', customer: 'Selam Tadesse', phone: '0911222222', salesman: 'Marta Daniel', pendingAmount: 830, paidAmount: 500, remainingBalance: 830, expectedDate: '2026-07-10', reminderDate: '2026-07-07', status: 'Waiting', remarks: 'Credit payment' }],
-    expenses: [{ id: 'EXP1', date: '2026-07-01', amount: 18000, category: 'Rent', receiptImage: '', remarks: 'Monthly rent' }],
-    income: [{ id: 'INC1', date: '2026-07-01', amount: 5000, category: 'Investment', remarks: 'Owner deposit' }],
     notifications: [{ id: 'N1', type: 'warning', message: 'Paracetamol is out of stock', createdAt: now }, { id: 'N2', type: 'info', message: 'Pending collection for INV002', createdAt: now }],
     activityLogs: [{ id: 'A1', user: 'admin', date: '2026-07-01', time: '08:20', action: 'Login', details: 'Signed in successfully' }],
     reports: []
@@ -191,8 +189,6 @@ function bindEvents() {
   document.getElementById('addCustomerBtn').addEventListener('click', () => openCustomerModal());
   document.getElementById('addSupplierBtn').addEventListener('click', () => openSupplierModal());
   document.getElementById('addSalesmanBtn').addEventListener('click', () => openSalesmanModal());
-  document.getElementById('addExpenseBtn').addEventListener('click', () => openExpenseModal());
-  document.getElementById('addIncomeBtn').addEventListener('click', () => openIncomeModal());
   document.getElementById('newSaleBtn').addEventListener('click', () => openSaleModal());
   document.getElementById('exportProductsBtn').addEventListener('click', () => exportTable(state.products, ['ID', 'Name', 'Category', 'Selling Price', 'Quantity']));
   document.getElementById('exportInventoryBtn').addEventListener('click', () => exportInventory());
@@ -269,7 +265,6 @@ function renderAll() {
   renderCustomers();
   renderSuppliers();
   renderSalesmen();
-  renderExpenses();
   renderReports();
   renderActivity();
   renderNotifications();
@@ -292,7 +287,6 @@ function recalculateState() {
   });
   const todaysSales = state.sales.filter((sale) => sale.createdAt?.slice(0, 10) === today && sale.status === 'Completed').reduce((sum, sale) => sum + Number(sale.grandTotal || 0), 0);
   const todaysProfit = state.sales.filter((sale) => sale.createdAt?.slice(0, 10) === today && sale.status === 'Completed').reduce((sum, sale) => sum + Number(sale.profit || 0), 0);
-  const todaysExpenses = state.expenses.filter((expense) => expense.date === today).reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   const todaysPurchases = state.inventoryHistory.filter((entry) => entry.date === today && entry.action === 'Purchase').reduce((sum, entry) => sum + Number(entry.quantity || 0), 0);
   const monthlySales = state.sales.filter((sale) => sale.createdAt?.slice(0, 7) === month && sale.status === 'Completed').reduce((sum, sale) => sum + Number(sale.grandTotal || 0), 0);
   const monthlyProfit = state.sales.filter((sale) => sale.createdAt?.slice(0, 7) === month && sale.status === 'Completed').reduce((sum, sale) => sum + Number(sale.profit || 0), 0);
@@ -310,7 +304,6 @@ function recalculateState() {
   state.dashboard = {
     todaysSales,
     todaysProfit,
-    todaysExpenses,
     todaysPurchases,
     monthlySales,
     monthlyProfit,
@@ -338,7 +331,6 @@ function renderDashboard() {
   document.getElementById('dashboardMetrics').innerHTML = [
     { label: 'Today Sales', value: currency(metrics.todaysSales) },
     { label: 'Today Profit', value: currency(metrics.todaysProfit) },
-    { label: 'Today Expenses', value: currency(metrics.todaysExpenses) },
     { label: 'Today Purchases', value: metrics.todaysPurchases },
     { label: 'Monthly Sales', value: currency(metrics.monthlySales) },
     { label: 'Monthly Profit', value: currency(metrics.monthlyProfit) },
@@ -543,30 +535,10 @@ function renderSalesmen() {
     </tr>`).join('');
 }
 
-function renderExpenses() {
-  document.getElementById('expensesTableBody').innerHTML = state.expenses.map((expense) => `
-    <tr>
-      <td>${expense.date}</td>
-      <td>${expense.category}</td>
-      <td>${currency(expense.amount)}</td>
-      <td>${expense.remarks}</td>
-      <td><button class="action-btn" onclick="deleteExpense('${expense.id}')">Delete</button></td>
-    </tr>`).join('');
-  document.getElementById('incomeTableBody').innerHTML = state.income.map((entry) => `
-    <tr>
-      <td>${entry.date}</td>
-      <td>${entry.category}</td>
-      <td>${currency(entry.amount)}</td>
-      <td>${entry.remarks}</td>
-      <td><button class="action-btn" onclick="deleteIncome('${entry.id}')">Delete</button></td>
-    </tr>`).join('');
-}
-
 function renderReports() {
   const summary = [
     ['Sales', currency(state.dashboard.todaysSales)],
     ['Profit', currency(state.dashboard.todaysProfit)],
-    ['Expenses', currency(state.dashboard.todaysExpenses)],
     ['Inventory Value', currency(state.dashboard.inventoryValue)]
   ];
   document.getElementById('reportsPanel').innerHTML = `<div class="cards-grid">${summary.map(([label, value]) => `<div class="card"><div class="label">${label}</div><div class="value">${value}</div></div>`).join('')}</div><div class="small" style="margin-top:12px;">Export options are available from the toolbar and report data is updated automatically.</div>`;
@@ -872,46 +844,6 @@ function openSalesmanModal(salesmanId = null) {
   });
 }
 function editSalesman(salesmanId) { openSalesmanModal(salesmanId); }
-function openExpenseModal() {
-  const html = `<div class="row"><input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" /><input name="category" value="Rent" placeholder="Category" /></div><input type="number" name="amount" placeholder="Amount" required /><textarea name="remarks" placeholder="Remarks"></textarea>`;
-  openModal('Add Expense', html, (formData) => {
-    const payload = Object.fromEntries(formData.entries());
-    payload.amount = Number(payload.amount || 0);
-    state.expenses.push({ id: uid('EXP'), ...payload });
-    state.settings.cashBalance -= payload.amount;
-    logActivity('Expense Added', `${payload.category} expense added`);
-    renderAll();
-    showToast('Expense recorded', 'success');
-  });
-}
-function openIncomeModal() {
-  const html = `<div class="row"><input type="date" name="date" value="${new Date().toISOString().slice(0,10)}" /><input name="category" value="Investment" placeholder="Category" /></div><input type="number" name="amount" placeholder="Amount" required /><textarea name="remarks" placeholder="Remarks"></textarea>`;
-  openModal('Add Income', html, (formData) => {
-    const payload = Object.fromEntries(formData.entries());
-    payload.amount = Number(payload.amount || 0);
-    state.income.push({ id: uid('INC'), ...payload });
-    state.settings.cashBalance += payload.amount;
-    logActivity('Income Added', `${payload.category} income added`);
-    renderAll();
-    showToast('Income recorded', 'success');
-  });
-}
-function deleteExpense(expenseId) { 
-  const expense = state.expenses.find(e => e.id === expenseId);
-  confirmAction(`Delete expense "${expense?.category || expenseId}"?`, () => {
-    state.expenses = state.expenses.filter((expense) => expense.id !== expenseId); 
-    renderAll(); 
-    showToast('Expense deleted', 'warning');
-  }); 
-}
-function deleteIncome(incomeId) { 
-  const income = state.income.find(i => i.id === incomeId);
-  confirmAction(`Delete income "${income?.category || incomeId}"?`, () => {
-    state.income = state.income.filter((entry) => entry.id !== incomeId); 
-    renderAll(); 
-    showToast('Income deleted', 'warning');
-  }); 
-}
 
 function handleGlobalSearch(event) {
   const query = event.target.value.toLowerCase();
