@@ -636,15 +636,6 @@ function getReportPeriodForExport() {
 }
 
 function renderCalculation() {
-  // Calculate totals
-  let totalCash = 0;
-  let totalCBE = 0;
-  let totalTelebirr = 0;
-  let totalBOA = 0;
-  let totalOther = 0;
-  let totalWaiting = 0;
-  let totalProfit = 0;
-  
   // Get filters
   const searchQuery = (document.getElementById('calcSearchInput')?.value || '').toLowerCase();
   const methodFilter = document.getElementById('calcMethodFilter')?.value || 'all';
@@ -715,23 +706,6 @@ function renderCalculation() {
         profit: sale.profit || 0,
         type: 'sale'
       };
-      
-      // Add to appropriate totals based on payment method
-      if (sale.status === 'Completed') {
-        if (sale.paymentMethod === 'Cash') {
-          totalCash += sale.paidAmount || 0;
-        } else if (sale.paymentMethod === 'CBE') {
-          totalCBE += sale.paidAmount || 0;
-        } else if (sale.paymentMethod === 'Telebirr') {
-          totalTelebirr += sale.paidAmount || 0;
-        } else if (sale.paymentMethod === 'BOA') {
-          totalBOA += sale.paidAmount || 0;
-        } else if (sale.paymentMethod === 'Other') {
-          totalOther += sale.paidAmount || 0;
-        }
-        totalProfit += sale.profit || 0;
-      }
-      
       transactions.push(transaction);
     }
   });
@@ -739,16 +713,13 @@ function renderCalculation() {
   // Process pending payments (waiting)
   state.pendingPayments.forEach(payment => {
     if (payment.status === 'Waiting' || payment.status === 'Pending') {
-      const remainingBalance = payment.remainingBalance || payment.pendingAmount || 0;
-      totalWaiting += remainingBalance;
-      
       const transaction = {
         date: payment.expectedDate || '',
         invoiceNumber: payment.invoiceNumber,
         salesman: payment.salesman || 'N/A',
         paymentMethod: 'Waiting',
         transferType: 'Waiting',
-        amount: remainingBalance,
+        amount: payment.remainingBalance || payment.pendingAmount || 0,
         grandTotal: payment.pendingAmount || 0,
         pid: payment.pid || '',
         referenceNumber: '',
@@ -782,21 +753,6 @@ function renderCalculation() {
           profit: 0,
           type: 'payment'
         };
-        
-        if (payment.status !== 'Cancelled') {
-          if (payment.method === 'Cash') {
-            totalCash += payment.amount || 0;
-          } else if (payment.method === 'CBE') {
-            totalCBE += payment.amount || 0;
-          } else if (payment.method === 'Telebirr') {
-            totalTelebirr += payment.amount || 0;
-          } else if (payment.method === 'BOA') {
-            totalBOA += payment.amount || 0;
-          } else if (payment.method === 'Other') {
-            totalOther += payment.amount || 0;
-          }
-        }
-        
         transactions.push(transaction);
       }
     }
@@ -853,9 +809,35 @@ function renderCalculation() {
     }
   });
   
+  // Calculate totals from FILTERED transactions only
+  let totalCash = 0;
+  let totalCBE = 0;
+  let totalTelebirr = 0;
+  let totalBOA = 0;
+  let totalOther = 0;
+  let totalWaiting = 0;
+  let totalProfit = 0;
+  
+  filteredTransactions.forEach(t => {
+    if (t.paymentMethod === 'Cash') {
+      totalCash += t.amount || 0;
+    } else if (t.paymentMethod === 'CBE') {
+      totalCBE += t.amount || 0;
+    } else if (t.paymentMethod === 'Telebirr') {
+      totalTelebirr += t.amount || 0;
+    } else if (t.paymentMethod === 'BOA') {
+      totalBOA += t.amount || 0;
+    } else if (t.paymentMethod === 'Other') {
+      totalOther += t.amount || 0;
+    } else if (t.paymentMethod === 'Waiting') {
+      totalWaiting += t.amount || 0;
+    }
+    totalProfit += t.profit || 0;
+  });
+  
   // Update summary cards
   const grandTotalReceived = totalCash + totalCBE + totalTelebirr + totalBOA + totalOther;
-  const totalSales = grandTotalReceived + totalWaiting;
+  const totalSalesAmount = grandTotalReceived + totalWaiting;
   
   document.getElementById('calcTotalCash').textContent = currency(totalCash);
   document.getElementById('calcTotalCBE').textContent = currency(totalCBE);
@@ -864,7 +846,7 @@ function renderCalculation() {
   document.getElementById('calcTotalOther').textContent = currency(totalOther);
   document.getElementById('calcTotalWaiting').textContent = currency(totalWaiting);
   document.getElementById('calcGrandTotal').textContent = currency(grandTotalReceived);
-  document.getElementById('calcTotalSales').textContent = currency(totalSales);
+  document.getElementById('calcTotalSales').textContent = currency(totalSalesAmount);
   document.getElementById('calcNetProfit').textContent = currency(totalProfit);
   
   // Render table
