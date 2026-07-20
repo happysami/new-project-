@@ -201,8 +201,6 @@ function bindEvents() {
   document.getElementById('calcSearchInput').addEventListener('input', renderCalculation);
   document.getElementById('calcMethodFilter').addEventListener('change', renderCalculation);
   document.getElementById('calcStatusFilter').addEventListener('change', renderCalculation);
-  document.getElementById('calcDateFrom').addEventListener('change', renderCalculation);
-  document.getElementById('calcDateTo').addEventListener('change', renderCalculation);
   document.getElementById('calcSortBy').addEventListener('change', renderCalculation);
   
   document.addEventListener('keydown', handleKeyboardShortcuts);
