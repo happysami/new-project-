@@ -8,10 +8,10 @@ let firebaseDb = null;
 let firebaseAuth = null;
 
 const rolePermissions = {
-  admin: ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'customers', 'suppliers', 'salesmen', 'reports', 'activity'],
-  'store manager': ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'customers', 'suppliers', 'salesmen', 'reports', 'activity'],
-  'sales manager': ['dashboard', 'products', 'inventory', 'sales', 'payments', 'customers', 'salesmen', 'reports', 'activity'],
-  salesman: ['dashboard', 'sales', 'customers', 'inventory', 'reports'],
+  admin: ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'suppliers', 'salesmen', 'reports', 'activity'],
+  'store manager': ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'suppliers', 'salesmen', 'reports', 'activity'],
+  'sales manager': ['dashboard', 'products', 'inventory', 'sales', 'payments', 'salesmen', 'reports', 'activity'],
+  salesman: ['dashboard', 'sales', 'inventory', 'reports'],
   cashier: ['dashboard', 'sales', 'payments', 'inventory', 'reports'],
   accountant: ['dashboard', 'payments', 'reports', 'activity'],
   viewer: ['dashboard', 'inventory', 'reports', 'activity']
@@ -124,10 +124,6 @@ function seedState() {
       { id: 'S1', name: 'Fresh Supply', phone: '0911000001', address: 'Addis Ababa', email: 'fresh@supply.com', outstandingBalance: 12000, products: ['Milk Pack'] },
      
     ],
-    customers: [
-      { id: 'CUST1', name: 'firtuna ', phone: '0911111111', address: 'akaki', email: 'alem@example.com', purchaseHistory: 2, pendingBalance: 1500, creditLimit: 5000, favoriteProducts: ['Milk Pack'], lastPurchase: '2026-07-01', totalPurchases: 3200 },
-      { id: 'CUST2', name: 'abdi ', phone: '0911222222', address: 'koye', purchaseHistory: 1, pendingBalance: 0, creditLimit: 3000, favoriteProducts: ['Headphones'], lastPurchase: '2026-07-04', totalPurchases: 1200 }
-    ],
     salesmen: [
      { id: 'SM1', name: 'yonata fike', phone: '0922222222', address: 'gofa', email: 'yoni@gmail.com', salary: 12000, commissionRate: 5, todaysSales: 2500, monthlySales: 14500, yearlySales: 52000, pendingCollections: 700, collectedAmount: 12000, performanceRating: 4.6 },
       { id: 'SM2', name: 'momo wolde ', phone: '0933333333',email: 'mamo@example.com', salary: 14000, commissionRate: 2, todaysSales: 3400, monthlySales: 6000, yearlySales: 61000, pendingCollections: 1200, collectedAmount: 15000, performanceRating: 4.8 }
@@ -186,7 +182,6 @@ function bindEvents() {
   document.getElementById('closeModalBtn').addEventListener('click', closeModal);
   document.getElementById('authForm').addEventListener('submit', handleAuth);
   document.getElementById('addProductBtn').addEventListener('click', () => openProductModal());
-  document.getElementById('addCustomerBtn').addEventListener('click', () => openCustomerModal());
   document.getElementById('addSupplierBtn').addEventListener('click', () => openSupplierModal());
   document.getElementById('addSalesmanBtn').addEventListener('click', () => openSalesmanModal());
   document.getElementById('newSaleBtn').addEventListener('click', () => openSaleModal());
@@ -262,7 +257,6 @@ function renderAll() {
   renderInventory();
   renderSales();
   renderPayments();
-  renderCustomers();
   renderSuppliers();
   renderSalesmen();
   renderReports();
@@ -357,7 +351,7 @@ function renderDashboard() {
   document.getElementById('notificationList').innerHTML = state.notifications.slice(0, 5).map((notify) => `<div class="small">${notify.message}</div>`).join('');
 
   const people = [...state.salesmen].sort((a, b) => b.monthlySales - a.monthlySales).slice(0, 3);
-  document.getElementById('peopleSummary').innerHTML = `<div class="small">Top salesman: ${people[0]?.name || 'n/a'} · ${currency(people[0]?.monthlySales || 0)}</div>${state.customers.slice(0, 2).map((customer) => `<div class="small">${customer.name} · ${currency(customer.totalPurchases || 0)}</div>`).join('')}`;
+  document.getElementById('peopleSummary').innerHTML = people.map((person) => `<div class="small">${person.name} · ${currency(person.monthlySales || 0)}</div>`).join('');
   document.getElementById('notifCount').textContent = state.notifications.length;
 }
 
@@ -463,7 +457,6 @@ function renderSales() {
   document.getElementById('salesTableBody').innerHTML = state.sales.map((sale) => `
     <tr>
       <td>${sale.invoiceNumber}</td>
-      <td>${state.customers.find((customer) => customer.id === sale.customerId)?.name || 'N/A'}</td>
       <td>${state.salesmen.find((salesman) => salesman.id === sale.salesmanId)?.name || 'N/A'}</td>
       <td>${sale.status}</td>
       <td>${currency(sale.grandTotal)}</td>
@@ -483,7 +476,6 @@ function renderPayments() {
   document.getElementById('pendingPaymentsBody').innerHTML = state.pendingPayments.map((payment) => `
     <tr>
       <td>${payment.invoiceNumber}</td>
-      <td>${payment.customer}</td>
       <td>${currency(payment.pendingAmount)}</td>
       <td>${payment.expectedDate}</td>
       <td>${payment.status}</td>
@@ -497,18 +489,6 @@ function renderPayments() {
       <td>${payment.method}</td>
       <td>${currency(payment.amount)}</td>
       <td>${payment.remarks}</td>
-    </tr>`).join('');
-}
-
-function renderCustomers() {
-  document.getElementById('customersTableBody').innerHTML = state.customers.map((customer) => `
-    <tr>
-      <td>${customer.id}</td>
-      <td>${customer.name}</td>
-      <td>${customer.phone}</td>
-      <td>${currency(customer.pendingBalance)}</td>
-      <td>${currency(customer.creditLimit)}</td>
-      <td><button class="action-btn" onclick="editCustomer('${customer.id}')">Edit</button></td>
     </tr>`).join('');
 }
 
@@ -699,7 +679,6 @@ function openSaleModal(saleId = null) {
   const sale = state.sales.find((entry) => entry.id === saleId);
   const html = `
     <div class="row">
-      <select name="customerId">${state.customers.map((customer) => `<option value="${customer.id}" ${sale?.customerId === customer.id ? 'selected' : ''}>${customer.name}</option>`).join('')}</select>
       <select name="salesmanId">${state.salesmen.map((salesman) => `<option value="${salesman.id}" ${sale?.salesmanId === salesman.id ? 'selected' : ''}>${salesman.name}</option>`).join('')}</select>
     </div>
     <div class="row">
@@ -729,7 +708,6 @@ function openSaleModal(saleId = null) {
     const saleEntry = {
       id: sale?.id || invoiceNumber,
       invoiceNumber,
-      customerId: payload.customerId,
       salesmanId: payload.salesmanId,
       status: payload.status || 'Completed',
       createdAt: new Date().toISOString(),
@@ -756,7 +734,7 @@ function openSaleModal(saleId = null) {
         state.inventoryHistory.push({ date: new Date().toISOString().slice(0,10), time: new Date().toTimeString().slice(0,5), user: currentUser?.name || 'system', product: product.name, action: 'Sale', quantity, previousBalance: product.currentQuantity + quantity, newBalance: product.currentQuantity, remarks: 'Completed sale' });
         state.payments.push({ id: uid('PAY'), invoiceNumber, amount: grandTotal, method: payload.paymentMethod || 'Cash', date: new Date().toISOString().slice(0,10), remarks: 'Sale payment' });
       } else if (payload.status === 'Pending') {
-        state.pendingPayments.push({ id: uid('PP'), pid: uid('PID'), invoiceNumber, customer: state.customers.find((customer) => customer.id === payload.customerId)?.name || 'N/A', phone: state.customers.find((customer) => customer.id === payload.customerId)?.phone || '', salesman: state.salesmen.find((salesman) => salesman.id === payload.salesmanId)?.name || 'N/A', pendingAmount: grandTotal, paidAmount: 0, remainingBalance: grandTotal, expectedDate: new Date().toISOString().slice(0,10), reminderDate: new Date().toISOString().slice(0,10), status: 'Waiting', remarks: 'Credit sale' });
+        state.pendingPayments.push({ id: uid('PP'), pid: uid('PID'), invoiceNumber, salesman: state.salesmen.find((salesman) => salesman.id === payload.salesmanId)?.name || 'N/A', pendingAmount: grandTotal, paidAmount: 0, remainingBalance: grandTotal, expectedDate: new Date().toISOString().slice(0,10), reminderDate: new Date().toISOString().slice(0,10), status: 'Waiting', remarks: 'Credit sale' });
       }
       logActivity('Sale Created', `${invoiceNumber} created`);
       showToast('Sale created', 'success');
@@ -802,21 +780,6 @@ function recordPayment(invoiceNumber) {
   showToast('Payment recorded', 'success');
 }
 
-function openCustomerModal(customerId = null) {
-  const customer = state.customers.find((entry) => entry.id === customerId);
-  const html = `<div class="row"><input name="id" value="${customer?.id || uid('CUST')}" placeholder="Customer ID" required /><input name="name" value="${customer?.name || ''}" placeholder="Customer Name" required /></div><div class="row"><input name="phone" value="${customer?.phone || ''}" placeholder="Phone" /><input name="email" value="${customer?.email || ''}" placeholder="Email" /></div><textarea name="address" placeholder="Address">${customer?.address || ''}</textarea><div class="row"><input type="number" name="creditLimit" value="${customer?.creditLimit || 0}" /><input type="number" name="pendingBalance" value="${customer?.pendingBalance || 0}" /></div>`;
-  openModal(customer ? 'Edit Customer' : 'Add Customer', html, (formData) => {
-    const payload = Object.fromEntries(formData.entries());
-    payload.creditLimit = Number(payload.creditLimit || 0);
-    payload.pendingBalance = Number(payload.pendingBalance || 0);
-    if (customer) Object.assign(customer, payload); else state.customers.push({ ...payload, purchaseHistory: 0, favoriteProducts: [], lastPurchase: '', totalPurchases: 0 });
-    closeModal();
-    renderAll();
-    showToast('Customer saved', 'success');
-  });
-}
-
-function editCustomer(customerId) { openCustomerModal(customerId); }
 function openSupplierModal(supplierId = null) {
   const supplier = state.suppliers.find((entry) => entry.id === supplierId);
   const html = `<div class="row"><input name="id" value="${supplier?.id || uid('S')}" placeholder="Supplier ID" required /><input name="name" value="${supplier?.name || ''}" placeholder="Supplier Name" required /></div><div class="row"><input name="phone" value="${supplier?.phone || ''}" placeholder="Phone" /><input name="email" value="${supplier?.email || ''}" placeholder="Email" /></div><textarea name="address" placeholder="Address">${supplier?.address || ''}</textarea><input type="number" name="outstandingBalance" value="${supplier?.outstandingBalance || 0}" />`;
@@ -851,7 +814,6 @@ function handleGlobalSearch(event) {
   const results = [];
   state.products.forEach((product) => { if (`${product.name} ${product.barcode} ${product.id}`.toLowerCase().includes(query)) results.push(`Product: ${product.name}`); });
   state.sales.forEach((sale) => { if (`${sale.invoiceNumber}`.toLowerCase().includes(query)) results.push(`Sale: ${sale.invoiceNumber}`); });
-  state.customers.forEach((customer) => { if (`${customer.name} ${customer.phone}`.toLowerCase().includes(query)) results.push(`Customer: ${customer.name}`); });
   state.suppliers.forEach((supplier) => { if (`${supplier.name} ${supplier.phone}`.toLowerCase().includes(query)) results.push(`Supplier: ${supplier.name}`); });
   state.salesmen.forEach((salesman) => { if (`${salesman.name} ${salesman.phone}`.toLowerCase().includes(query)) results.push(`Salesman: ${salesman.name}`); });
   if (results.length) showToast(results.slice(0, 5).join(' • '), 'info');
