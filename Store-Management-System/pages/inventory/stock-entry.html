@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stock Entry | Store Management System</title>
+    <link rel="stylesheet" href="../../css/main.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <h2>StoreFlow</h2>
+        <nav>
+          <a href="../../dashboard.html">Dashboard</a>
+          <a href="inventory.html">Inventory</a>
+          <a href="inventory-history.html">Inventory History</a>
+          <a href="stock-entry.html" class="active">Stock Entry</a>
+          <a href="../sales/sales.html">Sales</a>
+          <a href="../payments/payments.html">Payments</a>
+          <a href="../customers/customers.html">Customers</a>
+          <a href="../suppliers/suppliers.html">Suppliers</a>
+          <a href="../reports/reports.html">Reports</a>
+        </nav>
+      </aside>
+      <main class="page-content">
+        <header class="topbar">
+          <h1>Stock Entry</h1>
+          <a href="inventory.html">Back</a>
+        </header>
+
+        <section class="panel">
+          <!-- Control Bar -->
+          <div class="control-bar">
+            <div class="control-bar-left">
+              <!-- Quick Date Filters -->
+              <div class="quick-filters">
+                <button class="quick-filter-btn active" data-range="today">Today</button>
+                <button class="quick-filter-btn" data-range="yesterday">Yesterday</button>
+                <button class="quick-filter-btn" data-range="this-week">This Week</button>
+                <button class="quick-filter-btn" data-range="this-month">This Month</button>
+              </div>
+            </div>
+
+            <div class="control-bar-right">
+              <!-- Custom Date Picker -->
+              <div class="date-picker-wrapper">
+                <input type="text" id="customDateRange" class="date-input" placeholder="Select date range" readonly />
+                <svg class="date-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+              </div>
+
+              <!-- Store Filter -->
+              <div class="filter-dropdown">
+                <select id="storeFilter" class="filter-select">
+                  <option value="">All Stores</option>
+                  <option value="store-1">Downtown Store</option>
+                  <option value="store-2">Mall Branch</option>
+                  <option value="store-3">Airport Location</option>
+                </select>
+              </div>
+
+              <!-- Employee Filter -->
+              <div class="filter-dropdown">
+                <select id="employeeFilter" class="filter-select">
+                  <option value="">All Employees</option>
+                  <option value="emp-1">John Smith</option>
+                  <option value="emp-2">Sarah Johnson</option>
+                  <option value="emp-3">Mike Williams</option>
+                  <option value="emp-4">Emily Davis</option>
+                </select>
+              </div>
+
+              <!-- Adjustment Type Filter -->
+              <div class="filter-dropdown">
+                <select id="typeFilter" class="filter-select">
+                  <option value="">All Types</option>
+                  <option value="stock-in">Stock In</option>
+                  <option value="stock-out">Stock Out</option>
+                  <option value="damaged">Damaged</option>
+                  <option value="expired">Expired</option>
+                  <option value="correction">Correction</option>
+                  <option value="return">Return</option>
+                  <option value="theft">Theft/Loss</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stock Entry Form Card -->
+          <div class="stock-entry-card">
+            <h3>Add New Stock Entry</h3>
+            <form id="stockEntryForm" class="stock-form">
+              <div class="form-grid">
+                <!-- Item Selection -->
+                <div class="form-group">
+                  <label for="itemName">Item Name</label>
+                  <select id="itemName" class="form-select" required>
+                    <option value="">Select an item...</option>
+                    <option value="widget-pro-x200">Widget Pro X200</option>
+                    <option value="gadget-mini-s50">Gadget Mini S50</option>
+                    <option value="electronic-hub-z1">Electronic Hub Z1</option>
+                    <option value="smart-sensor-a1">Smart Sensor A1</option>
+                    <option value="power-cell-c100">Power Cell C100</option>
+                  </select>
+                </div>
+
+                <!-- Store Selection -->
+                <div class="form-group">
+                  <label for="storeLocation">Store Location</label>
+                  <select id="storeLocation" class="form-select" required>
+                    <option value="">Select store...</option>
+                    <option value="store-1">Downtown Store</option>
+                    <option value="store-2">Mall Branch</option>
+                    <option value="store-3">Airport Location</option>
+                  </select>
+                </div>
+
+                <!-- Employee -->
+                <div class="form-group">
+                  <label for="employee">Responsible Employee</label>
+                  <select id="employee" class="form-select" required>
+                    <option value="">Select employee...</option>
+                    <option value="emp-1">John Smith</option>
+                    <option value="emp-2">Sarah Johnson</option>
+                    <option value="emp-3">Mike Williams</option>
+                    <option value="emp-4">Emily Davis</option>
+                  </select>
+                </div>
+
+                <!-- Adjustment Type -->
+                <div class="form-group">
+                  <label for="adjustmentType">Adjustment Type</label>
+                  <select id="adjustmentType" class="form-select" required>
+                    <option value="stock-in">Stock In (+)</option>
+                    <option value="stock-out">Stock Out (-)</option>
+                    <option value="damaged">Damaged (-)</option>
+                    <option value="expired">Expired (-)</option>
+                    <option value="correction">Correction (+/-)</option>
+                    <option value="return">Return (+)</option>
+                    <option value="theft">Theft/Loss (-)</option>
+                  </select>
+                </div>
+
+                <!-- Quantity -->
+                <div class="form-group">
+                  <label for="quantity">Quantity</label>
+                  <input type="number" id="quantity" class="form-input" min="1" placeholder="Enter quantity" required />
+                </div>
+
+                <!-- Current Stock (Read-only) -->
+                <div class="form-group">
+                  <label for="currentStock">Current Stock</label>
+                  <input type="text" id="currentStock" class="form-input" value="--" readonly />
+                </div>
+
+                <!-- Reference/Document Number -->
+                <div class="form-group full-width">
+                  <label for="reference">Reference / Document Number</label>
+                  <input type="text" id="reference" class="form-input" placeholder="e.g., Invoice #, PO #, Receipt #" />
+                </div>
+
+                <!-- Notes -->
+                <div class="form-group full-width">
+                  <label for="notes">Notes / Reason</label>
+                  <textarea id="notes" class="form-textarea" rows="2" placeholder="Enter additional notes or reason for adjustment..."></textarea>
+                </div>
+              </div>
+
+              <!-- Preview Card -->
+              <div class="entry-preview" id="entryPreview">
+                <h4>Entry Preview</h4>
+                <div class="preview-content">
+                  <div class="preview-row">
+                    <span class="preview-label">Item:</span>
+                    <span class="preview-value" id="previewItem">--</span>
+                  </div>
+                  <div class="preview-row">
+                    <span class="preview-label">Store:</span>
+                    <span class="preview-value" id="previewStore">--</span>
+                  </div>
+                  <div class="preview-row">
+                    <span class="preview-label">Adjustment:</span>
+                    <span class="preview-value" id="previewAdjustment">--</span>
+                  </div>
+                  <div class="preview-row highlight">
+                    <span class="preview-label">New Stock Level:</span>
+                    <span class="preview-value" id="previewNewStock">--</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="clearBtn">Clear</button>
+                <button type="submit" class="btn btn-primary">Submit Entry</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Search Bar -->
+          <div class="table-controls">
+            <div class="search-wrapper">
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="searchInput" class="search-input" placeholder="Search entries by item, employee, or reason..." />
+            </div>
+            <div class="table-info">
+              <span id="resultCount">Showing 0 results</span>
+            </div>
+          </div>
+
+          <!-- Recent Entries Table -->
+          <div class="table-wrapper">
+            <table class="data-table" id="stockEntryTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Item Name</th>
+                  <th>Store Location</th>
+                  <th>Responsible Employee</th>
+                  <th>Reason for Change</th>
+                  <th class="text-center">Adjustment Quantity</th>
+                  <th class="text-right">Final Stock Count</th>
+                </tr>
+              </thead>
+              <tbody id="stockEntryBody">
+                <!-- Data will be loaded here -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination">
+            <button class="pagination-btn" id="prevPage" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+              Previous
+            </button>
+            <span class="pagination-info">Page <span id="currentPage">1</span> of <span id="totalPages">1</span></span>
+            <button class="pagination-btn" id="nextPage" disabled>
+              Next
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="../../js/inventory/stock-entry.js"></script>
+  </body>
+</html>

@@ -318,3 +318,158 @@ body.dark .reason-theft { background: rgba(185, 28, 28, 0.2); color: #fca5a5; }
   font-weight: 600;
   color: var(--text-primary);
 }
+
+/* Stock Entry Form Card */
+.stock-entry-card {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+}
+
+.stock-entry-card h3 {
+  margin-bottom: 20px;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.stock-form .form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.stock-form .form-group {
+  margin-bottom: 0;
+}
+
+.stock-form .form-group.full-width {
+  grid-column: span 3;
+}
+
+@media (max-width: 768px) {
+  .stock-form .form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stock-form .form-group.full-width {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .stock-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .stock-form .form-group.full-width {
+    grid-column: span 1;
+  }
+}
+
+/* Entry Preview */
+.entry-preview {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.entry-preview h4 {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.preview-content {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.preview-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-row.highlight {
+  background: var(--surface);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.preview-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.preview-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.preview-value .positive {
+  color: var(--success);
+}
+
+.preview-value .negative {
+  color: var(--danger);
+}
+
+.stock-change {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Recent entries title */
+.recent-entries h4 {
+  margin-bottom: 16px;
+  color: var(--text-primary);
+}
+
+.recent-entries {
+  margin-top: 24px;
+}
