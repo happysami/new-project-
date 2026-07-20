@@ -547,6 +547,96 @@ function renderActivity() {
     </tr>`).join('');
 }
 
+// Date filter functions for Calculation module
+function setDateFilter(filterType) {
+  window.calcDateFilterType = filterType;
+  
+  // Update button states
+  document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filterType);
+  });
+  
+  // Show/hide custom date range inputs
+  const customRange = document.getElementById('customDateRange');
+  if (customRange) {
+    customRange.classList.toggle('hidden', filterType !== 'custom');
+  }
+  
+  // Update report period display
+  updateReportPeriodDisplay(filterType);
+  
+  // Re-render calculation
+  renderCalculation();
+}
+
+function setCustomDateRange() {
+  const dateFrom = document.getElementById('calcCustomDateFrom')?.value || '';
+  const dateTo = document.getElementById('calcCustomDateTo')?.value || '';
+  
+  if (dateFrom && dateTo) {
+    updateReportPeriodDisplay('custom', dateFrom, dateTo);
+    renderCalculation();
+  }
+}
+
+function updateReportPeriodDisplay(filterType, dateFrom = '', dateTo = '') {
+  const display = document.getElementById('reportPeriodDisplay');
+  if (!display) return;
+  
+  const today = new Date();
+  let periodText = 'All Time';
+  
+  switch (filterType) {
+    case 'today':
+      periodText = 'Today';
+      break;
+    case 'yesterday':
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      periodText = formatDateForDisplay(yesterday.toISOString().slice(0, 10));
+      break;
+    case 'thisWeek':
+      const weekStart = new Date(today);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      periodText = `Week: ${formatDateForDisplay(weekStart.toISOString().slice(0, 10))} - Today`;
+      break;
+    case 'thisMonth':
+      periodText = `Month: ${formatDateForDisplay(new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10))} - Today`;
+      break;
+    case 'thisYear':
+      periodText = `Year: ${today.getFullYear()}`;
+      break;
+    case 'custom':
+      if (dateFrom && dateTo) {
+        periodText = `${formatDateForDisplay(dateFrom)} - ${formatDateForDisplay(dateTo)}`;
+      } else if (dateFrom) {
+        periodText = `From: ${formatDateForDisplay(dateFrom)}`;
+      } else if (dateTo) {
+        periodText = `Until: ${formatDateForDisplay(dateTo)}`;
+      } else {
+        periodText = 'Custom Range';
+      }
+      break;
+    default:
+      periodText = 'All Time';
+  }
+  
+  display.textContent = periodText;
+}
+
+function formatDateForDisplay(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const options = { day: '2-digit', month: 'short', year: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+}
+
+function getReportPeriodForExport() {
+  const filterType = window.calcDateFilterType || 'allTime';
+  const display = document.getElementById('reportPeriodDisplay')?.textContent || 'All Time';
+  return display;
+}
+
 function renderCalculation() {
   // Calculate totals
   let totalCash = 0;
@@ -561,9 +651,50 @@ function renderCalculation() {
   const searchQuery = (document.getElementById('calcSearchInput')?.value || '').toLowerCase();
   const methodFilter = document.getElementById('calcMethodFilter')?.value || 'all';
   const statusFilter = document.getElementById('calcStatusFilter')?.value || 'all';
-  const dateFrom = document.getElementById('calcDateFrom')?.value || '';
-  const dateTo = document.getElementById('calcDateTo')?.value || '';
   const sortBy = document.getElementById('calcSortBy')?.value || 'date-desc';
+  
+  // Get date range from quick filter or custom
+  let dateFrom = '';
+  let dateTo = '';
+  const dateFilterType = window.calcDateFilterType || 'allTime';
+  
+  if (dateFilterType !== 'allTime') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    switch (dateFilterType) {
+      case 'today':
+        dateFrom = today.toISOString().slice(0, 10);
+        dateTo = today.toISOString().slice(0, 10);
+        break;
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        dateFrom = yesterday.toISOString().slice(0, 10);
+        dateTo = yesterday.toISOString().slice(0, 10);
+        break;
+      case 'thisWeek':
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        dateFrom = weekStart.toISOString().slice(0, 10);
+        dateTo = today.toISOString().slice(0, 10);
+        break;
+      case 'thisMonth':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        dateFrom = monthStart.toISOString().slice(0, 10);
+        dateTo = today.toISOString().slice(0, 10);
+        break;
+      case 'thisYear':
+        const yearStart = new Date(today.getFullYear(), 0, 1);
+        dateFrom = yearStart.toISOString().slice(0, 10);
+        dateTo = today.toISOString().slice(0, 10);
+        break;
+      case 'custom':
+        dateFrom = document.getElementById('calcCustomDateFrom')?.value || '';
+        dateTo = document.getElementById('calcCustomDateTo')?.value || '';
+        break;
+    }
+  }
   
   // Build transaction list
   const transactions = [];
@@ -711,6 +842,14 @@ function renderCalculation() {
         return a.amount - b.amount;
       case 'amount-desc':
         return b.amount - a.amount;
+      case 'method':
+        return (a.paymentMethod || '').localeCompare(b.paymentMethod || '');
+      case 'salesman':
+        return (a.salesman || '').localeCompare(b.salesman || '');
+      case 'invoice-asc':
+        return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '');
+      case 'invoice-desc':
+        return (b.invoiceNumber || '').localeCompare(a.invoiceNumber || '');
       default:
         return 0;
     }
@@ -837,6 +976,7 @@ function toggleTransferFields() {
 }
 
 function exportCalculationExcel() {
+  const reportPeriod = getReportPeriodForExport();
   const totals = {
     'Total Cash': document.getElementById('calcTotalCash')?.textContent || 'ETB 0',
     'Total CBE': document.getElementById('calcTotalCBE')?.textContent || 'ETB 0',
@@ -875,9 +1015,11 @@ function exportCalculationExcel() {
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   
-  // Add summary section
+  // Add summary section with report period
   XLSX.utils.sheet_add_aoa(ws, [
     ['Calculation Summary Report'],
+    [`Report Period: ${reportPeriod}`],
+    ['Generated: ' + new Date().toLocaleString()],
     [''],
     ['Summary', 'Amount'],
     ['Total Cash', totals['Total Cash']],
@@ -899,10 +1041,13 @@ function exportCalculationExcel() {
 }
 
 function exportCalculationCSV() {
+  const reportPeriod = getReportPeriodForExport();
   const rows = [];
   
-  // Add header
+  // Add header with report period
   rows.push(['Calculation Summary Report']);
+  rows.push([`Report Period: ${reportPeriod}`]);
+  rows.push(['Generated: ' + new Date().toLocaleString()]);
   rows.push(['']);
   rows.push(['Summary', 'Amount']);
   rows.push(['Total Cash', document.getElementById('calcTotalCash')?.textContent || 'ETB 0']);

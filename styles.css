@@ -127,6 +127,88 @@ th { background: var(--surface-2); font-size: 0.9rem; }
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
+/* Date Filter Bar */
+.date-filter-bar {
+  padding: 16px 20px;
+}
+
+.date-filter-bar h3 {
+  margin: 0 0 12px 0;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quick-filter-btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-filter-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.quick-filter-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.custom-date-range {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.custom-date-range.hidden {
+  display: none;
+}
+
+.date-range-inputs {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.date-range-inputs .filter-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.report-period-display {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-period-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.report-period-value {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 0.95rem;
+}
+
 .summary-card {
   position: relative;
   overflow: hidden;
