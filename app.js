@@ -582,6 +582,13 @@ function updateReportPeriodDisplay(filterType, dateFrom = '', dateTo = '') {
   if (!display) return;
   
   const today = new Date();
+  const getLocalDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   let periodText = 'All Time';
   
   switch (filterType) {
@@ -591,15 +598,16 @@ function updateReportPeriodDisplay(filterType, dateFrom = '', dateTo = '') {
     case 'yesterday':
       const yesterday = new Date(today);
       yesterday.setDate(yesterday.getDate() - 1);
-      periodText = formatDateForDisplay(yesterday.toISOString().slice(0, 10));
+      periodText = formatDateForDisplay(getLocalDateString(yesterday));
       break;
     case 'thisWeek':
       const weekStart = new Date(today);
       weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      periodText = `Week: ${formatDateForDisplay(weekStart.toISOString().slice(0, 10))} - Today`;
+      periodText = `Week: ${formatDateForDisplay(getLocalDateString(weekStart))} - Today`;
       break;
     case 'thisMonth':
-      periodText = `Month: ${formatDateForDisplay(new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10))} - Today`;
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      periodText = `Month: ${formatDateForDisplay(getLocalDateString(monthStart))} - Today`;
       break;
     case 'thisYear':
       periodText = `Year: ${today.getFullYear()}`;
@@ -624,6 +632,14 @@ function updateReportPeriodDisplay(filterType, dateFrom = '', dateTo = '') {
 
 function formatDateForDisplay(dateStr) {
   if (!dateStr) return '';
+  // Parse the date string directly to avoid timezone issues
+  const parts = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (parts) {
+    const date = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]));
+    const options = { day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  }
+  // Fallback
   const date = new Date(dateStr);
   const options = { day: '2-digit', month: 'short', year: 'numeric' };
   return date.toLocaleDateString('en-US', options);
@@ -642,41 +658,48 @@ function renderCalculation() {
   const statusFilter = document.getElementById('calcStatusFilter')?.value || 'all';
   const sortBy = document.getElementById('calcSortBy')?.value || 'date-desc';
   
-  // Get date range from quick filter or custom
+  // Get date range from quick filter or custom (using local date)
   let dateFrom = '';
   let dateTo = '';
   const dateFilterType = window.calcDateFilterType || 'allTime';
   
+  // Helper to get local date string
+  const getLocalDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   if (dateFilterType !== 'allTime') {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
     
     switch (dateFilterType) {
       case 'today':
-        dateFrom = today.toISOString().slice(0, 10);
-        dateTo = today.toISOString().slice(0, 10);
+        dateFrom = getLocalDateString(today);
+        dateTo = getLocalDateString(today);
         break;
       case 'yesterday':
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-        dateFrom = yesterday.toISOString().slice(0, 10);
-        dateTo = yesterday.toISOString().slice(0, 10);
+        dateFrom = getLocalDateString(yesterday);
+        dateTo = getLocalDateString(yesterday);
         break;
       case 'thisWeek':
         const weekStart = new Date(today);
         weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-        dateFrom = weekStart.toISOString().slice(0, 10);
-        dateTo = today.toISOString().slice(0, 10);
+        dateFrom = getLocalDateString(weekStart);
+        dateTo = getLocalDateString(today);
         break;
       case 'thisMonth':
         const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-        dateFrom = monthStart.toISOString().slice(0, 10);
-        dateTo = today.toISOString().slice(0, 10);
+        dateFrom = getLocalDateString(monthStart);
+        dateTo = getLocalDateString(today);
         break;
       case 'thisYear':
         const yearStart = new Date(today.getFullYear(), 0, 1);
-        dateFrom = yearStart.toISOString().slice(0, 10);
-        dateTo = today.toISOString().slice(0, 10);
+        dateFrom = getLocalDateString(yearStart);
+        dateTo = getLocalDateString(today);
         break;
       case 'custom':
         dateFrom = document.getElementById('calcCustomDateFrom')?.value || '';
@@ -688,11 +711,27 @@ function renderCalculation() {
   // Build transaction list
   const transactions = [];
   
+  // Helper to get date from various formats
+  const getDateFromTransaction = (sale) => {
+    if (sale.createdAt) {
+      // Handle ISO string and local date formats
+      const date = new Date(sale.createdAt);
+      if (!isNaN(date.getTime())) {
+        return getLocalDateString(date);
+      }
+      // Try as local date string
+      if (sale.createdAt.match(/^\d{4}-\d{2}-\d{2}/)) {
+        return sale.createdAt.slice(0, 10);
+      }
+    }
+    return sale.createdAt?.slice(0, 10) || '';
+  };
+  
   // Process completed sales (payments received)
   state.sales.forEach(sale => {
     if (sale.status === 'Completed' || sale.status === 'Pending') {
       const transaction = {
-        date: sale.createdAt?.slice(0, 10) || '',
+        date: getDateFromTransaction(sale),
         invoiceNumber: sale.invoiceNumber,
         salesman: state.salesmen.find(s => s.id === sale.salesmanId)?.name || 'N/A',
         paymentMethod: sale.paymentMethod || 'Cash',
@@ -735,10 +774,16 @@ function renderCalculation() {
   // Process direct payments
   state.payments.forEach(payment => {
     if (payment.status !== 'Cancelled') {
-      let isDuplicate = transactions.some(t => t.type === 'sale' && t.invoiceNumber === payment.invoiceNumber && t.date === payment.date);
+      // Normalize payment date
+      let paymentDate = payment.date || '';
+      if (paymentDate && paymentDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+        paymentDate = paymentDate.slice(0, 10);
+      }
+      
+      let isDuplicate = transactions.some(t => t.type === 'sale' && t.invoiceNumber === payment.invoiceNumber && t.date === paymentDate);
       if (!isDuplicate) {
         const transaction = {
-          date: payment.date || '',
+          date: paymentDate,
           invoiceNumber: payment.invoiceNumber,
           salesman: state.sales.find(s => s.invoiceNumber === payment.invoiceNumber)?.salesmanId ? 
             state.salesmen.find(sm => sm.id === state.sales.find(s => s.invoiceNumber === payment.invoiceNumber).salesmanId)?.name || 'N/A' : 'N/A',
@@ -779,8 +824,8 @@ function renderCalculation() {
     }
     
     // Date filter
-    if (dateFrom && t.date < dateFrom) return false;
-    if (dateTo && t.date > dateTo) return false;
+    if (dateFrom && t.date && t.date < dateFrom) return false;
+    if (dateTo && t.date && t.date > dateTo) return false;
     
     return true;
   });
