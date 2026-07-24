@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Van Sales | Store Management System</title>
+    <link rel="stylesheet" href="../../css/main.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <h2>StoreFlow</h2>
+        <nav>
+          <a href="../../dashboard.html">Dashboard</a>
+          <a href="../inventory/inventory.html">Inventory</a>
+          <a href="../sales/sales.html">Sales</a>
+          <a href="../payments/payments.html">Payments</a>
+          <a href="../customers/customers.html">Customers</a>
+          <a href="../suppliers/suppliers.html">Suppliers</a>
+          <a href="van-sales.html" class="active">Van Sales</a>
+          <a href="../reports/reports.html">Reports</a>
+        </nav>
+      </aside>
+      <main class="page-content">
+        <header class="topbar">
+          <h1>Van Sales Management</h1>
+          <a href="../../dashboard.html">Back</a>
+        </header>
+        <section class="panel van-sales-container">
+          <div class="van-sales-tabs">
+            <button class="tab-btn active" data-tab="issue-stock">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+              Issue Stock to Van
+            </button>
+            <button class="tab-btn" data-tab="route-settlement">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11l3 3L22 4"></path>
+                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+              </svg>
+              Route Settlement & Return
+            </button>
+          </div>
+          
+          <div class="tab-content active" id="issue-stock">
+            <div class="panel-header">
+              <h3>Stock Loading</h3>
+              <p>Transfer inventory from Main Store to Van</p>
+            </div>
+            <form id="issueStockForm" class="van-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="salesmanSelect">Select Salesman / Driver</label>
+                  <select id="salesmanSelect" required>
+                    <option value="">-- Select Salesman --</option>
+                    <option value="salesman-1">John Smith</option>
+                    <option value="salesman-2">Sarah Johnson</option>
+                    <option value="salesman-3">Mike Williams</option>
+                    <option value="salesman-4">Emily Davis</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="vanSelect">Select Vehicle / Van ID</label>
+                  <select id="vanSelect" required>
+                    <option value="">-- Select Van --</option>
+                    <option value="van-01">Van 01</option>
+                    <option value="van-02">Van 02</option>
+                    <option value="van-03">Van 03</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="form-group full-width">
+                <label for="productSelect">Product Selection</label>
+                <select id="productSelect" required>
+                  <option value="">-- Select Product --</option>
+                  <option value="gihone-5l" data-stock="450">gihone 5l (Main Store: 450)</option>
+                  <option value="widget-pro-x200" data-stock="380">Widget Pro X200 (Main Store: 380)</option>
+                  <option value="gadget-mini-s50" data-stock="175">Gadget Mini S50 (Main Store: 175)</option>
+                  <option value="electronic-hub-z1" data-stock="95">Electronic Hub Z1 (Main Store: 95)</option>
+                  <option value="smart-sensor-a1" data-stock="88">Smart Sensor A1 (Main Store: 88)</option>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="quantityToLoad">Quantity to Load</label>
+                <input type="number" id="quantityToLoad" min="1" placeholder="Enter quantity" required />
+                <span class="helper-text">Available: <span id="availableStock">--</span></span>
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                  Load Van
+                </button>
+              </div>
+            </form>
+            
+            <div class="recent-loads-section">
+              <h4>Recent Van Stock Transfers</h4>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Van</th>
+                    <th>Driver</th>
+                    <th>Product</th>
+                    <th>Qty Loaded</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="recentLoadsBody">
+                  <tr>
+                    <td colspan="6" class="empty-state">No recent transfers</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <div class="tab-content" id="route-settlement">
+            <div class="panel-header">
+              <h3>Route Settlement & Return</h3>
+              <p>End-of-day reconciliation and inventory return</p>
+            </div>
+            
+            <form id="routeSettlementForm" class="van-form">
+              <div class="form-group">
+                <label for="activeVanSelect">Select Active Van / Driver</label>
+                <select id="activeVanSelect" required>
+                  <option value="">-- Select Active Route --</option>
+                  <option value="van-01-salesman-1" data-salesman="John Smith" data-date="2026-07-24">Van 01 - John Smith (Today)</option>
+                  <option value="van-02-salesman-2" data-salesman="Sarah Johnson" data-date="2026-07-24">Van 02 - Sarah Johnson (Today)</option>
+                </select>
+              </div>
+              
+              <div class="settlement-summary">
+                <h4>Route Summary</h4>
+                <div id="routeSummaryTable" class="summary-table-container">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Product Name</th>
+                        <th>Initial Loaded Qty</th>
+                        <th>Qty Sold on Route</th>
+                        <th>Expected Remaining</th>
+                        <th>Actual Counted Return</th>
+                        <th>Damaged / Missing Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody id="settlementBody">
+                      <tr>
+                        <td colspan="6" class="empty-state">Select an active route to view details</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <div class="cash-reconciliation-card">
+                <h4>Cash Reconciliation</h4>
+                <div class="cash-grid">
+                  <div class="cash-item">
+                    <span class="cash-label">Total Expected Cash from Sales</span>
+                    <span class="cash-value" id="totalExpectedCash">GHS 0.00</span>
+                  </div>
+                  <div class="cash-item">
+                    <label for="cashReceived">Cash Received from Driver</label>
+                    <input type="number" id="cashReceived" min="0" step="0.01" placeholder="0.00" />
+                  </div>
+                  <div class="cash-item variance">
+                    <span class="cash-label">Variance</span>
+                    <span class="cash-value" id="cashVariance">GHS 0.00</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn btn-success">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 11l3 3L22 4"></path>
+                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+                  </svg>
+                  Complete Route Settlement & Return Stock
+                </button>
+              </div>
+            </form>
+            
+            <div class="settlement-history-section">
+              <h4>Recent Settlements</h4>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Van</th>
+                    <th>Driver</th>
+                    <th>Items Returned</th>
+                    <th>Items Damaged</th>
+                    <th>Cash Collected</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="settlementHistoryBody">
+                  <tr>
+                    <td colspan="7" class="empty-state">No settlement records</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="../../js/van-sales/van-sales.js"></script>
+  </body>
+</html>
