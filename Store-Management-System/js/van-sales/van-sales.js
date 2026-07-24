@@ -43,13 +43,25 @@ let vanStockTransfers = [];
 let routeSettlements = [];
 let currentRouteData = null;
 
+// Get today's date in YYYY-MM-DD format
+const getToday = () => new Date().toISOString().split('T')[0];
+
+// Get formatted time string
+const getFormattedTime = () => {
+  const now = new Date();
+  return now.toLocaleString('en-US', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
+};
+
 // Sample route data (simulating loaded stock for today)
 let activeRoutes = {
   'van-01-salesman-1': {
     van: 'van-01',
     salesman: 'John Smith',
     salesmanId: 'salesman-1',
-    date: new Date().toISOString().split('T')[0],
+    date: getToday(),
     loadedStock: {
       'gihone-5l': { loaded: 100, sold: 65 },
       'widget-pro-x200': { loaded: 50, sold: 30 },
@@ -61,7 +73,7 @@ let activeRoutes = {
     van: 'van-02',
     salesman: 'Sarah Johnson',
     salesmanId: 'salesman-2',
-    date: new Date().toISOString().split('T')[0],
+    date: getToday(),
     loadedStock: {
       'gihone-5l': { loaded: 80, sold: 55 },
       'electronic-hub-z1': { loaded: 40, sold: 25 }
@@ -88,8 +100,35 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeTabs();
   initializeIssueStockForm();
   initializeRouteSettlementForm();
+  syncStockDataWithHTML();
+  updateActiveVanDates();
   loadSampleData();
 });
+
+// Sync stock data from JS to HTML
+function syncStockDataWithHTML() {
+  // Update product select options with current stock data
+  const productStocks = document.querySelectorAll('.product-stock');
+  productStocks.forEach(el => {
+    const productId = el.dataset.product;
+    if (productId && stockData[productId]) {
+      el.textContent = stockData[productId]['main-store'];
+      // Update the data-stock attribute on parent option
+      const option = el.closest('option');
+      if (option) {
+        option.dataset.stock = stockData[productId]['main-store'];
+      }
+    }
+  });
+}
+
+// Update active van options with today's date
+function updateActiveVanDates() {
+  const activeVanOptions = document.querySelectorAll('#activeVanSelect option[data-date]');
+  activeVanOptions.forEach(option => {
+    option.dataset.date = getToday();
+  });
+}
 
 // Tab Navigation
 function initializeTabs() {
@@ -161,6 +200,8 @@ function validateLoadQuantity() {
 function handleIssueStock(e) {
   e.preventDefault();
   
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  
   const salesmanId = salesmanSelect.value;
   const vanId = vanSelect.value;
   const productId = productSelect.value;
@@ -168,6 +209,11 @@ function handleIssueStock(e) {
   
   if (!salesmanId || !vanId || !productId || !qty) {
     showToast('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  if (qty <= 0) {
+    showToast('Quantity must be greater than zero', 'error');
     return;
   }
   
@@ -179,73 +225,106 @@ function handleIssueStock(e) {
     return;
   }
   
-  const salesman = salesmenData.find(s => s.id === salesmanId);
-  const van = vanData.find(v => v.id === vanId);
+  // Show loading state
+  setLoadingState(submitBtn, true);
   
-  // Create transfer record
-  const transfer = {
-    id: vanStockTransfers.length + 1,
-    date: new Date().toLocaleString('en-US', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hour12: true
-    }),
-    van: van.name,
-    vanId: vanId,
-    driver: salesman.name,
-    driverId: salesmanId,
-    product: productNames[productId],
-    productId: productId,
-    quantity: qty,
-    status: 'Loaded',
-    timestamp: new Date().toISOString()
-  };
-  
-  // Update stock data
-  stockData[productId]['main-store'] -= qty;
-  stockData[productId][vanId] += qty;
-  
-  // Update active route if exists
-  const routeKey = `${vanId}-${salesmanId}`;
-  if (activeRoutes[routeKey]) {
-    if (!activeRoutes[routeKey].loadedStock[productId]) {
-      activeRoutes[routeKey].loadedStock[productId] = { loaded: 0, sold: 0 };
-    }
-    activeRoutes[routeKey].loadedStock[productId].loaded += qty;
-  } else {
-    activeRoutes[routeKey] = {
-      van: vanId,
-      salesman: salesman.name,
-      salesmanId: salesmanId,
-      date: new Date().toISOString().split('T')[0],
-      loadedStock: {
-        [productId]: { loaded: qty, sold: 0 }
-      },
-      expectedCash: 0
+  // Simulate async operation
+  setTimeout(() => {
+    const salesman = salesmenData.find(s => s.id === salesmanId);
+    const van = vanData.find(v => v.id === vanId);
+    
+    // Create transfer record
+    const transfer = {
+      id: vanStockTransfers.length + 1,
+      date: new Date().toLocaleString('en-US', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: true
+      }),
+      van: van.name,
+      vanId: vanId,
+      driver: salesman.name,
+      driverId: salesmanId,
+      product: productNames[productId],
+      productId: productId,
+      quantity: qty,
+      status: 'Loaded',
+      timestamp: new Date().toISOString()
     };
+    
+    // Update stock data
+    stockData[productId]['main-store'] -= qty;
+    stockData[productId][vanId] += qty;
+    
+    // Update active route if exists
+    const routeKey = `${vanId}-${salesmanId}`;
+    if (activeRoutes[routeKey]) {
+      if (!activeRoutes[routeKey].loadedStock[productId]) {
+        activeRoutes[routeKey].loadedStock[productId] = { loaded: 0, sold: 0 };
+      }
+      activeRoutes[routeKey].loadedStock[productId].loaded += qty;
+    } else {
+      activeRoutes[routeKey] = {
+        van: vanId,
+        salesman: salesman.name,
+        salesmanId: salesmanId,
+        date: new Date().toISOString().split('T')[0],
+        loadedStock: {
+          [productId]: { loaded: qty, sold: 0 }
+        },
+        expectedCash: 0
+      };
+    }
+    
+    // Add to transfers list
+    vanStockTransfers.unshift(transfer);
+    
+    // Add to inventory history
+    addInventoryHistoryEntry({
+      type: 'transfer',
+      subType: 'van-loading',
+      item: productNames[productId],
+      itemId: productId,
+      quantity: -qty,
+      from: 'Main Store',
+      to: van.name,
+      reference: `Transfer #${transfer.id}`,
+      timestamp: transfer.timestamp
+    });
+    
+    showToast(`Successfully loaded ${qty} units of ${productNames[productId]} to ${van.name}`, 'success');
+    
+    // Reset form and update table
+    issueStockForm.reset();
+    if (availableStock) availableStock.textContent = '--';
+    renderRecentLoads();
+    
+    // Update stock display in product options
+    syncStockDataWithHTML();
+    
+    // Reset loading state
+    setLoadingState(submitBtn, false);
+  }, 300);
+}
+
+function setLoadingState(button, isLoading) {
+  if (!button) return;
+  
+  if (isLoading) {
+    button.disabled = true;
+    button.dataset.originalText = button.innerHTML;
+    button.innerHTML = `
+      <svg class="spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+        </path>
+      </svg>
+      Loading...
+    `;
+  } else {
+    button.disabled = false;
+    button.innerHTML = button.dataset.originalText || 'Load Van';
   }
-  
-  // Add to transfers list
-  vanStockTransfers.unshift(transfer);
-  
-  // Add to inventory history
-  addInventoryHistoryEntry({
-    type: 'transfer',
-    subType: 'van-loading',
-    item: productNames[productId],
-    itemId: productId,
-    quantity: -qty,
-    from: 'Main Store',
-    to: van.name,
-    reference: `Transfer #${transfer.id}`,
-    timestamp: transfer.timestamp
-  });
-  
-  showToast(`Successfully loaded ${qty} units of ${productNames[productId]} to ${van.name}`, 'success');
-  
-  // Reset form and update table
-  issueStockForm.reset();
-  if (availableStock) availableStock.textContent = '--';
-  renderRecentLoads();
 }
 
 function renderRecentLoads() {
@@ -374,13 +453,17 @@ function handleReturnInputChange(e) {
   const expected = parseInt(input.dataset.expected) || 0;
   const loaded = parseInt(document.querySelector(`.damaged-input[data-product="${productId}"]`)?.dataset.loaded) || 0;
   const sold = parseInt(document.querySelector(`.damaged-input[data-product="${productId}"]`)?.dataset.sold) || 0;
-  const returned = parseInt(input.value) || 0;
+  let returned = parseInt(input.value) || 0;
   
-  // Calculate damaged/missing
-  const damaged = loaded - sold - returned;
+  // Prevent negative values
+  returned = Math.max(0, returned);
+  input.value = returned;
+  
+  // Calculate damaged/missing (never negative)
+  const damaged = Math.max(0, loaded - sold - returned);
   const damagedInput = document.querySelector(`.damaged-input[data-product="${productId}"]`);
   if (damagedInput) {
-    damagedInput.value = Math.max(0, damaged);
+    damagedInput.value = damaged;
   }
 }
 
@@ -398,8 +481,17 @@ function updateCashVariance() {
 function handleRouteSettlement(e) {
   e.preventDefault();
   
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  
   if (!currentRouteData) {
     showToast('Please select an active route', 'error');
+    return;
+  }
+  
+  // Validate cash received
+  const cashReceivedValue = parseFloat(cashReceived?.value) || 0;
+  if (cashReceivedValue < 0) {
+    showToast('Cash received cannot be negative', 'error');
     return;
   }
   
@@ -413,7 +505,7 @@ function handleRouteSettlement(e) {
     totalReturned: 0,
     totalDamaged: 0,
     expectedCash: currentRouteData.expectedCash,
-    cashReceived: parseFloat(cashReceived?.value) || 0,
+    cashReceived: cashReceivedValue,
     cashVariance: 0,
     timestamp: new Date().toISOString()
   };
@@ -424,11 +516,15 @@ function handleRouteSettlement(e) {
   
   returnInputs.forEach(input => {
     const productId = input.dataset.product;
-    const returned = parseInt(input.value) || 0;
+    let returned = parseInt(input.value) || 0;
     const damagedInput = document.querySelector(`.damaged-input[data-product="${productId}"]`);
-    const damaged = parseInt(damagedInput?.value) || 0;
+    let damaged = parseInt(damagedInput?.value) || 0;
     const loaded = currentRouteData.loadedStock[productId]?.loaded || 0;
     const sold = currentRouteData.loadedStock[productId]?.sold || 0;
+    
+    // Ensure non-negative values
+    returned = Math.max(0, returned);
+    damaged = Math.max(0, damaged);
     
     if (loaded > 0) {
       settlementData.items.push({
@@ -468,39 +564,48 @@ function handleRouteSettlement(e) {
   
   settlementData.cashVariance = settlementData.cashReceived - settlementData.expectedCash;
   
-  // Add to settlements list
-  routeSettlements.unshift(settlementData);
+  // Show loading state
+  setLoadingState(submitBtn, true);
   
-  // Log to inventory history
-  addInventoryHistoryEntry({
-    type: 'settlement',
-    subType: 'van-settlement',
-    van: currentRouteData.van,
-    salesman: currentRouteData.salesman,
-    items: settlementData.items,
-    totalReturned: settlementData.totalReturned,
-    totalDamaged: settlementData.totalDamaged,
-    cashCollected: settlementData.cashReceived,
-    reference: `Route Settlement - ${settlementData.date}`,
-    timestamp: settlementData.timestamp
-  });
-  
-  // Clear active route
-  const routeKey = `${currentRouteData.van}-${currentRouteData.salesmanId}`;
-  delete activeRoutes[routeKey];
-  
-  showToast('Route settlement completed successfully!', 'success');
-  
-  // Reset form
-  routeSettlementForm.reset();
-  currentRouteData = null;
-  renderSettlementTable();
-  if (totalExpectedCash) totalExpectedCash.textContent = 'GHS 0.00';
-  if (cashVariance) {
-    cashVariance.textContent = 'GHS 0.00';
-    cashVariance.className = 'cash-value';
-  }
-  renderSettlementHistory();
+  // Simulate async operation
+  setTimeout(() => {
+    // Add to settlements list
+    routeSettlements.unshift(settlementData);
+    
+    // Log to inventory history
+    addInventoryHistoryEntry({
+      type: 'settlement',
+      subType: 'van-settlement',
+      van: currentRouteData.van,
+      salesman: currentRouteData.salesman,
+      items: settlementData.items,
+      totalReturned: settlementData.totalReturned,
+      totalDamaged: settlementData.totalDamaged,
+      cashCollected: settlementData.cashReceived,
+      reference: `Route Settlement - ${settlementData.date}`,
+      timestamp: settlementData.timestamp
+    });
+    
+    // Clear active route
+    const routeKey = `${currentRouteData.van}-${currentRouteData.salesmanId}`;
+    delete activeRoutes[routeKey];
+    
+    showToast('Route settlement completed successfully!', 'success');
+    
+    // Reset form
+    routeSettlementForm.reset();
+    currentRouteData = null;
+    renderSettlementTable();
+    if (totalExpectedCash) totalExpectedCash.textContent = 'GHS 0.00';
+    if (cashVariance) {
+      cashVariance.textContent = 'GHS 0.00';
+      cashVariance.className = 'cash-value';
+    }
+    renderSettlementHistory();
+    
+    // Reset loading state
+    setLoadingState(submitBtn, false);
+  }, 300);
 }
 
 function renderSettlementHistory() {
@@ -546,11 +651,12 @@ function addInventoryHistoryEntry(entry) {
 
 // Load sample data
 function loadSampleData() {
-  // Add some sample transfers
+  // Add some sample transfers with dynamic dates
+  const today = getFormattedTime();
   vanStockTransfers = [
     {
       id: 1,
-      date: '2026-07-24 08:30 AM',
+      date: today,
       van: 'Van 01',
       vanId: 'van-01',
       driver: 'John Smith',
@@ -559,11 +665,11 @@ function loadSampleData() {
       productId: 'gihone-5l',
       quantity: 100,
       status: 'Loaded',
-      timestamp: '2026-07-24T08:30:00'
+      timestamp: new Date().toISOString()
     },
     {
       id: 2,
-      date: '2026-07-24 07:45 AM',
+      date: today,
       van: 'Van 02',
       vanId: 'van-02',
       driver: 'Sarah Johnson',
@@ -572,7 +678,7 @@ function loadSampleData() {
       productId: 'widget-pro-x200',
       quantity: 50,
       status: 'Loaded',
-      timestamp: '2026-07-24T07:45:00'
+      timestamp: new Date().toISOString()
     }
   ];
   
