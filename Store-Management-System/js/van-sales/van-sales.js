@@ -56,6 +56,7 @@ const getFormattedTime = () => {
 };
 
 // Sample route data (simulating loaded stock for today)
+// Expected cash: sold * price for each product
 let activeRoutes = {
   'van-01-salesman-1': {
     van: 'van-01',
@@ -66,8 +67,8 @@ let activeRoutes = {
       'gihone-5l': { loaded: 100, sold: 65 },
       'widget-pro-x200': { loaded: 50, sold: 30 },
       'gadget-mini-s50': { loaded: 75, sold: 40 }
-    },
-    expectedCash: 6925.00
+    }
+    // Expected cash: (65*45) + (30*120) + (40*65) = 2925 + 3600 + 2600 = 9125
   },
   'van-02-salesman-2': {
     van: 'van-02',
@@ -77,8 +78,8 @@ let activeRoutes = {
     loadedStock: {
       'gihone-5l': { loaded: 80, sold: 55 },
       'electronic-hub-z1': { loaded: 40, sold: 25 }
-    },
-    expectedCash: 4325.00
+    }
+    // Expected cash: (55*45) + (25*89) = 2475 + 2225 = 4700
   }
 };
 
@@ -451,20 +452,28 @@ function handleReturnInputChange(e) {
   const input = e.target;
   const productId = input.dataset.product;
   const expected = parseInt(input.dataset.expected) || 0;
-  const loaded = parseInt(document.querySelector(`.damaged-input[data-product="${productId}"]`)?.dataset.loaded) || 0;
-  const sold = parseInt(document.querySelector(`.damaged-input[data-product="${productId}"]`)?.dataset.sold) || 0;
+  
+  // Get loaded and sold from currentRouteData (more reliable than DOM)
+  const loaded = currentRouteData?.loadedStock?.[productId]?.loaded || 0;
+  const sold = currentRouteData?.loadedStock?.[productId]?.sold || 0;
+  
   let returned = parseInt(input.value) || 0;
   
   // Prevent negative values
   returned = Math.max(0, returned);
   input.value = returned;
   
-  // Calculate damaged/missing (never negative)
+  // Calculate damaged/missing = Loaded - Sold - Returned (never negative)
   const damaged = Math.max(0, loaded - sold - returned);
+  
+  // Update the damaged input field
   const damagedInput = document.querySelector(`.damaged-input[data-product="${productId}"]`);
   if (damagedInput) {
     damagedInput.value = damaged;
   }
+  
+  // Debug log
+  console.log(`Product: ${productId}, Loaded: ${loaded}, Sold: ${sold}, Returned: ${returned}, Damaged: ${damaged}`);
 }
 
 function updateCashVariance() {
