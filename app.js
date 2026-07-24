@@ -8,13 +8,13 @@ let firebaseDb = null;
 let firebaseAuth = null;
 
 const rolePermissions = {
-  admin: ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'suppliers', 'salesmen', 'reports', 'activity'],
-  'store manager': ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'suppliers', 'salesmen', 'reports', 'activity'],
-  'sales manager': ['dashboard', 'products', 'inventory', 'sales', 'payments', 'salesmen', 'reports', 'activity'],
-  salesman: ['dashboard', 'sales', 'inventory', 'reports'],
-  cashier: ['dashboard', 'sales', 'payments', 'inventory', 'reports'],
-  accountant: ['dashboard', 'payments', 'reports', 'activity'],
-  viewer: ['dashboard', 'inventory', 'reports', 'activity']
+  admin: ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'calculation', 'suppliers', 'salesmen', 'reports', 'activity'],
+  'store manager': ['dashboard', 'products', 'stock', 'inventory', 'sales', 'payments', 'calculation', 'suppliers', 'salesmen', 'reports', 'activity'],
+  'sales manager': ['dashboard', 'products', 'inventory', 'sales', 'payments', 'calculation', 'salesmen', 'reports', 'activity'],
+  salesman: ['dashboard', 'sales', 'inventory', 'calculation', 'reports'],
+  cashier: ['dashboard', 'sales', 'payments', 'inventory', 'calculation', 'reports'],
+  accountant: ['dashboard', 'payments', 'calculation', 'reports', 'activity'],
+  viewer: ['dashboard', 'inventory', 'calculation', 'reports', 'activity']
 };
 
 // Secure ID generation using crypto API
@@ -193,6 +193,16 @@ function bindEvents() {
   document.getElementById('inventorySearch').addEventListener('input', renderInventory);
   document.getElementById('inventoryFilter').addEventListener('change', renderInventory);
   document.getElementById('productSearch').addEventListener('input', renderProducts);
+  
+  // Calculation module event listeners
+  document.getElementById('exportCalculationExcelBtn').addEventListener('click', exportCalculationExcel);
+  document.getElementById('exportCalculationCSVBtn').addEventListener('click', exportCalculationCSV);
+  document.getElementById('printCalculationBtn').addEventListener('click', printCalculation);
+  document.getElementById('calcSearchInput').addEventListener('input', renderCalculation);
+  document.getElementById('calcMethodFilter').addEventListener('change', renderCalculation);
+  document.getElementById('calcStatusFilter').addEventListener('change', renderCalculation);
+  document.getElementById('calcSortBy').addEventListener('change', renderCalculation);
+  
   document.addEventListener('keydown', handleKeyboardShortcuts);
   document.getElementById('modal').addEventListener('click', (event) => { if (event.target.id === 'modal') closeModal(); });
 }
@@ -257,6 +267,7 @@ function renderAll() {
   renderInventory();
   renderSales();
   renderPayments();
+  renderCalculation();
   renderSuppliers();
   renderSalesmen();
   renderReports();
@@ -534,6 +545,586 @@ function renderActivity() {
     </tr>`).join('');
 }
 
+// Date filter functions for Calculation module
+function setDateFilter(filterType) {
+  window.calcDateFilterType = filterType;
+  
+  // Update button states
+  document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.filter === filterType);
+  });
+  
+  // Show/hide custom date range inputs
+  const customRange = document.getElementById('customDateRange');
+  if (customRange) {
+    customRange.classList.toggle('hidden', filterType !== 'custom');
+  }
+  
+  // Update report period display
+  updateReportPeriodDisplay(filterType);
+  
+  // Re-render calculation
+  renderCalculation();
+}
+
+function setCustomDateRange() {
+  const dateFrom = document.getElementById('calcCustomDateFrom')?.value || '';
+  const dateTo = document.getElementById('calcCustomDateTo')?.value || '';
+  
+  if (dateFrom && dateTo) {
+    updateReportPeriodDisplay('custom', dateFrom, dateTo);
+    renderCalculation();
+  }
+}
+
+function updateReportPeriodDisplay(filterType, dateFrom = '', dateTo = '') {
+  const display = document.getElementById('reportPeriodDisplay');
+  if (!display) return;
+  
+  const today = new Date();
+  const getLocalDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  let periodText = 'All Time';
+  
+  switch (filterType) {
+    case 'today':
+      periodText = 'Today';
+      break;
+    case 'yesterday':
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      periodText = formatDateForDisplay(getLocalDateString(yesterday));
+      break;
+    case 'thisWeek':
+      const weekStart = new Date(today);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      periodText = `Week: ${formatDateForDisplay(getLocalDateString(weekStart))} - Today`;
+      break;
+    case 'thisMonth':
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      periodText = `Month: ${formatDateForDisplay(getLocalDateString(monthStart))} - Today`;
+      break;
+    case 'thisYear':
+      periodText = `Year: ${today.getFullYear()}`;
+      break;
+    case 'custom':
+      if (dateFrom && dateTo) {
+        periodText = `${formatDateForDisplay(dateFrom)} - ${formatDateForDisplay(dateTo)}`;
+      } else if (dateFrom) {
+        periodText = `From: ${formatDateForDisplay(dateFrom)}`;
+      } else if (dateTo) {
+        periodText = `Until: ${formatDateForDisplay(dateTo)}`;
+      } else {
+        periodText = 'Custom Range';
+      }
+      break;
+    default:
+      periodText = 'All Time';
+  }
+  
+  display.textContent = periodText;
+}
+
+function formatDateForDisplay(dateStr) {
+  if (!dateStr) return '';
+  // Parse the date string directly to avoid timezone issues
+  const parts = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (parts) {
+    const date = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]));
+    const options = { day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  }
+  // Fallback
+  const date = new Date(dateStr);
+  const options = { day: '2-digit', month: 'short', year: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+}
+
+function getReportPeriodForExport() {
+  const filterType = window.calcDateFilterType || 'allTime';
+  const display = document.getElementById('reportPeriodDisplay')?.textContent || 'All Time';
+  return display;
+}
+
+function renderCalculation() {
+  // Get filters
+  const searchQuery = (document.getElementById('calcSearchInput')?.value || '').toLowerCase();
+  const methodFilter = document.getElementById('calcMethodFilter')?.value || 'all';
+  const statusFilter = document.getElementById('calcStatusFilter')?.value || 'all';
+  const sortBy = document.getElementById('calcSortBy')?.value || 'date-desc';
+  
+  // Get date range from quick filter or custom (using local date)
+  let dateFrom = '';
+  let dateTo = '';
+  const dateFilterType = window.calcDateFilterType || 'allTime';
+  
+  // Helper to get local date string
+  const getLocalDateString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  if (dateFilterType !== 'allTime') {
+    const today = new Date();
+    
+    switch (dateFilterType) {
+      case 'today':
+        dateFrom = getLocalDateString(today);
+        dateTo = getLocalDateString(today);
+        break;
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        dateFrom = getLocalDateString(yesterday);
+        dateTo = getLocalDateString(yesterday);
+        break;
+      case 'thisWeek':
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        dateFrom = getLocalDateString(weekStart);
+        dateTo = getLocalDateString(today);
+        break;
+      case 'thisMonth':
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        dateFrom = getLocalDateString(monthStart);
+        dateTo = getLocalDateString(today);
+        break;
+      case 'thisYear':
+        const yearStart = new Date(today.getFullYear(), 0, 1);
+        dateFrom = getLocalDateString(yearStart);
+        dateTo = getLocalDateString(today);
+        break;
+      case 'custom':
+        dateFrom = document.getElementById('calcCustomDateFrom')?.value || '';
+        dateTo = document.getElementById('calcCustomDateTo')?.value || '';
+        break;
+    }
+  }
+  
+  // Build transaction list
+  const transactions = [];
+  
+  // Helper to get date from various formats
+  const getDateFromTransaction = (sale) => {
+    if (sale.createdAt) {
+      // Handle ISO string and local date formats
+      const date = new Date(sale.createdAt);
+      if (!isNaN(date.getTime())) {
+        return getLocalDateString(date);
+      }
+      // Try as local date string
+      if (sale.createdAt.match(/^\d{4}-\d{2}-\d{2}/)) {
+        return sale.createdAt.slice(0, 10);
+      }
+    }
+    return sale.createdAt?.slice(0, 10) || '';
+  };
+  
+  // Process completed sales (payments received)
+  state.sales.forEach(sale => {
+    if (sale.status === 'Completed' || sale.status === 'Pending') {
+      const transaction = {
+        date: getDateFromTransaction(sale),
+        invoiceNumber: sale.invoiceNumber,
+        salesman: state.salesmen.find(s => s.id === sale.salesmanId)?.name || 'N/A',
+        paymentMethod: sale.paymentMethod || 'Cash',
+        transferType: sale.transferType || (sale.paymentMethod === 'Cash' ? 'Cash' : ''),
+        amount: sale.paidAmount || 0,
+        grandTotal: sale.grandTotal || 0,
+        pid: '',
+        referenceNumber: sale.referenceNumber || '',
+        status: sale.status,
+        remark: sale.remarks || '',
+        profit: sale.profit || 0,
+        type: 'sale'
+      };
+      transactions.push(transaction);
+    }
+  });
+  
+  // Process pending payments (waiting)
+  state.pendingPayments.forEach(payment => {
+    if (payment.status === 'Waiting' || payment.status === 'Pending') {
+      const transaction = {
+        date: payment.expectedDate || '',
+        invoiceNumber: payment.invoiceNumber,
+        salesman: payment.salesman || 'N/A',
+        paymentMethod: 'Waiting',
+        transferType: 'Waiting',
+        amount: payment.remainingBalance || payment.pendingAmount || 0,
+        grandTotal: payment.pendingAmount || 0,
+        pid: payment.pid || '',
+        referenceNumber: '',
+        status: payment.status,
+        remark: payment.remarks || '',
+        profit: 0,
+        type: 'pending'
+      };
+      transactions.push(transaction);
+    }
+  });
+  
+  // Process direct payments
+  state.payments.forEach(payment => {
+    if (payment.status !== 'Cancelled') {
+      // Normalize payment date
+      let paymentDate = payment.date || '';
+      if (paymentDate && paymentDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+        paymentDate = paymentDate.slice(0, 10);
+      }
+      
+      let isDuplicate = transactions.some(t => t.type === 'sale' && t.invoiceNumber === payment.invoiceNumber && t.date === paymentDate);
+      if (!isDuplicate) {
+        const transaction = {
+          date: paymentDate,
+          invoiceNumber: payment.invoiceNumber,
+          salesman: state.sales.find(s => s.invoiceNumber === payment.invoiceNumber)?.salesmanId ? 
+            state.salesmen.find(sm => sm.id === state.sales.find(s => s.invoiceNumber === payment.invoiceNumber).salesmanId)?.name || 'N/A' : 'N/A',
+          paymentMethod: payment.method || 'Cash',
+          transferType: payment.transferType || payment.method || 'Cash',
+          amount: payment.amount || 0,
+          grandTotal: payment.amount || 0,
+          pid: payment.pid || '',
+          referenceNumber: payment.referenceNumber || '',
+          status: 'Completed',
+          remark: payment.remarks || '',
+          profit: 0,
+          type: 'payment'
+        };
+        transactions.push(transaction);
+      }
+    }
+  });
+  
+  // Apply filters
+  let filteredTransactions = transactions.filter(t => {
+    // Search filter
+    if (searchQuery) {
+      const searchable = `${t.invoiceNumber} ${t.referenceNumber} ${t.salesman} ${t.remark} ${t.pid}`.toLowerCase();
+      if (!searchable.includes(searchQuery)) return false;
+    }
+    
+    // Method filter
+    if (methodFilter !== 'all') {
+      if (methodFilter === 'Waiting') {
+        if (t.paymentMethod !== 'Waiting') return false;
+      } else if (t.paymentMethod !== methodFilter) return false;
+    }
+    
+    // Status filter
+    if (statusFilter !== 'all') {
+      if (t.status !== statusFilter) return false;
+    }
+    
+    // Date filter
+    if (dateFrom && t.date && t.date < dateFrom) return false;
+    if (dateTo && t.date && t.date > dateTo) return false;
+    
+    return true;
+  });
+  
+  // Apply sorting
+  filteredTransactions.sort((a, b) => {
+    switch (sortBy) {
+      case 'date-asc':
+        return (a.date || '').localeCompare(b.date || '');
+      case 'date-desc':
+        return (b.date || '').localeCompare(a.date || '');
+      case 'amount-asc':
+        return a.amount - b.amount;
+      case 'amount-desc':
+        return b.amount - a.amount;
+      case 'method':
+        return (a.paymentMethod || '').localeCompare(b.paymentMethod || '');
+      case 'salesman':
+        return (a.salesman || '').localeCompare(b.salesman || '');
+      case 'invoice-asc':
+        return (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '');
+      case 'invoice-desc':
+        return (b.invoiceNumber || '').localeCompare(a.invoiceNumber || '');
+      default:
+        return 0;
+    }
+  });
+  
+  // Calculate totals from FILTERED transactions only
+  let totalCash = 0;
+  let totalCBE = 0;
+  let totalTelebirr = 0;
+  let totalBOA = 0;
+  let totalOther = 0;
+  let totalWaiting = 0;
+  let totalProfit = 0;
+  
+  filteredTransactions.forEach(t => {
+    if (t.paymentMethod === 'Cash') {
+      totalCash += t.amount || 0;
+    } else if (t.paymentMethod === 'CBE') {
+      totalCBE += t.amount || 0;
+    } else if (t.paymentMethod === 'Telebirr') {
+      totalTelebirr += t.amount || 0;
+    } else if (t.paymentMethod === 'BOA') {
+      totalBOA += t.amount || 0;
+    } else if (t.paymentMethod === 'Other') {
+      totalOther += t.amount || 0;
+    } else if (t.paymentMethod === 'Waiting') {
+      totalWaiting += t.amount || 0;
+    }
+    totalProfit += t.profit || 0;
+  });
+  
+  // Update summary cards
+  const grandTotalReceived = totalCash + totalCBE + totalTelebirr + totalBOA + totalOther;
+  const totalSalesAmount = grandTotalReceived + totalWaiting;
+  
+  document.getElementById('calcTotalCash').textContent = currency(totalCash);
+  document.getElementById('calcTotalCBE').textContent = currency(totalCBE);
+  document.getElementById('calcTotalTelebirr').textContent = currency(totalTelebirr);
+  document.getElementById('calcTotalBOA').textContent = currency(totalBOA);
+  document.getElementById('calcTotalOther').textContent = currency(totalOther);
+  document.getElementById('calcTotalWaiting').textContent = currency(totalWaiting);
+  document.getElementById('calcGrandTotal').textContent = currency(grandTotalReceived);
+  document.getElementById('calcTotalSales').textContent = currency(totalSalesAmount);
+  document.getElementById('calcNetProfit').textContent = currency(totalProfit);
+  
+  // Render table
+  const tbody = document.getElementById('calculationTableBody');
+  if (!tbody) return;
+  
+  tbody.innerHTML = filteredTransactions.map(t => `
+    <tr>
+      <td>${t.date || '-'}</td>
+      <td><strong>${t.invoiceNumber || '-'}</strong></td>
+      <td>${t.salesman || '-'}</td>
+      <td><span class="method-badge ${(t.paymentMethod || '').toLowerCase()}">${t.paymentMethod || '-'}</span></td>
+      <td>${t.transferType || '-'}</td>
+      <td><strong>${currency(t.amount)}</strong></td>
+      <td>${t.pid || '-'}</td>
+      <td>${t.referenceNumber || '-'}</td>
+      <td><span class="status-badge ${(t.status || '').toLowerCase()}">${t.status || '-'}</span></td>
+      <td>${t.remark || '-'}</td>
+      <td>
+        ${t.type === 'pending' && t.status === 'Waiting' ? `
+          <button class="action-btn complete" onclick="openMarkAsPaidModal('${t.invoiceNumber}')">Mark Paid</button>
+        ` : ''}
+      </td>
+    </tr>`).join('');
+  
+  // Update entries count
+  const entriesCount = document.getElementById('calcEntriesCount');
+  if (entriesCount) {
+    entriesCount.textContent = `Showing ${filteredTransactions.length} of ${transactions.length} entries`;
+  }
+}
+
+function openMarkAsPaidModal(invoiceNumber) {
+  const pending = state.pendingPayments.find(p => p.invoiceNumber === invoiceNumber);
+  if (!pending) return showToast('Payment not found', 'error');
+  
+  const html = `
+    <div class="row">
+      <div><strong>Invoice:</strong> ${invoiceNumber}</div>
+      <div><strong>Amount:</strong> ${currency(pending.remainingBalance || pending.pendingAmount)}</div>
+    </div>
+    <div class="row">
+      <select name="paymentMethod" id="paidPaymentMethod" onchange="toggleTransferFields()">
+        <option value="Cash">Cash</option>
+        <option value="CBE">CBE Transfer</option>
+        <option value="Telebirr">Telebirr</option>
+        <option value="BOA">BOA Transfer</option>
+        <option value="Other">Other Transfer</option>
+      </select>
+    </div>
+    <div id="transferFields" class="hidden">
+      <div class="row">
+        <input name="transferName" placeholder="Transfer Name" />
+        <input name="referenceNumber" placeholder="Reference Number" />
+      </div>
+    </div>
+    <textarea name="remarks" placeholder="Payment remarks"></textarea>
+  `;
+  
+  openModal('Mark as Paid', html, (formData) => {
+    const payload = Object.fromEntries(formData);
+    const paymentMethod = payload.paymentMethod || 'Cash';
+    const amount = pending.remainingBalance || pending.pendingAmount || 0;
+    
+    // Update pending payment status
+    pending.status = 'Paid';
+    pending.paidAmount = (pending.paidAmount || 0) + amount;
+    pending.remainingBalance = 0;
+    
+    // Add payment record
+    state.payments.push({
+      id: uid('PAY'),
+      invoiceNumber,
+      amount,
+      method: paymentMethod,
+      transferType: payload.referenceNumber ? payload.referenceNumber : paymentMethod,
+      referenceNumber: payload.referenceNumber || '',
+      date: new Date().toISOString().slice(0, 10),
+      remarks: payload.remarks || 'Payment received'
+    });
+    
+    // Update sale status if needed
+    const sale = state.sales.find(s => s.invoiceNumber === invoiceNumber);
+    if (sale) {
+      sale.status = 'Completed';
+      sale.paidAmount = (sale.paidAmount || 0) + amount;
+    }
+    
+    // Update cash balance if Cash
+    if (paymentMethod === 'Cash') {
+      state.settings.cashBalance = (state.settings.cashBalance || 0) + amount;
+    }
+    
+    logActivity('Payment Received', `${invoiceNumber} paid via ${paymentMethod}`);
+    closeModal();
+    renderAll();
+    showToast('Payment marked as paid', 'success');
+  });
+}
+
+function toggleTransferFields() {
+  const method = document.getElementById('paidPaymentMethod')?.value;
+  const transferFields = document.getElementById('transferFields');
+  if (transferFields) {
+    transferFields.classList.toggle('hidden', method === 'Cash');
+  }
+}
+
+function exportCalculationExcel() {
+  const reportPeriod = getReportPeriodForExport();
+  const totals = {
+    'Total Cash': document.getElementById('calcTotalCash')?.textContent || 'ETB 0',
+    'Total CBE': document.getElementById('calcTotalCBE')?.textContent || 'ETB 0',
+    'Total Telebirr': document.getElementById('calcTotalTelebirr')?.textContent || 'ETB 0',
+    'Total BOA': document.getElementById('calcTotalBOA')?.textContent || 'ETB 0',
+    'Total Other Transfers': document.getElementById('calcTotalOther')?.textContent || 'ETB 0',
+    'Total Waiting Payments': document.getElementById('calcTotalWaiting')?.textContent || 'ETB 0',
+    'Grand Total Received': document.getElementById('calcGrandTotal')?.textContent || 'ETB 0',
+    'Total Sales': document.getElementById('calcTotalSales')?.textContent || 'ETB 0',
+    'Net Profit': document.getElementById('calcNetProfit')?.textContent || 'ETB 0'
+  };
+  
+  // Get table data
+  const table = document.querySelector('#calculationTableBody');
+  const rows = [];
+  if (table) {
+    table.querySelectorAll('tr').forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length > 0) {
+        rows.push({
+          'Date': cells[0]?.textContent || '',
+          'Invoice': cells[1]?.textContent || '',
+          'Salesman': cells[2]?.textContent || '',
+          'Payment Method': cells[3]?.textContent || '',
+          'Transfer Type': cells[4]?.textContent || '',
+          'Amount': cells[5]?.textContent || '',
+          'PID': cells[6]?.textContent || '',
+          'Reference No.': cells[7]?.textContent || '',
+          'Status': cells[8]?.textContent || '',
+          'Remark': cells[9]?.textContent || ''
+        });
+      }
+    });
+  }
+  
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  
+  // Add summary section with report period
+  XLSX.utils.sheet_add_aoa(ws, [
+    ['Calculation Summary Report'],
+    [`Report Period: ${reportPeriod}`],
+    ['Generated: ' + new Date().toLocaleString()],
+    [''],
+    ['Summary', 'Amount'],
+    ['Total Cash', totals['Total Cash']],
+    ['Total CBE', totals['Total CBE']],
+    ['Total Telebirr', totals['Total Telebirr']],
+    ['Total BOA', totals['Total BOA']],
+    ['Total Other Transfers', totals['Total Other Transfers']],
+    ['Total Waiting Payments', totals['Total Waiting Payments']],
+    ['Grand Total Received', totals['Grand Total Received']],
+    ['Total Sales', totals['Total Sales']],
+    ['Net Profit', totals['Net Profit']],
+    [''],
+    ['Transaction Details']
+  ], { origin: 'A1' });
+  
+  XLSX.utils.book_append_sheet(wb, ws, 'Calculation Report');
+  XLSX.writeFile(wb, `Calculation_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  showToast('Report exported to Excel', 'success');
+}
+
+function exportCalculationCSV() {
+  const reportPeriod = getReportPeriodForExport();
+  const rows = [];
+  
+  // Add header with report period
+  rows.push(['Calculation Summary Report']);
+  rows.push([`Report Period: ${reportPeriod}`]);
+  rows.push(['Generated: ' + new Date().toLocaleString()]);
+  rows.push(['']);
+  rows.push(['Summary', 'Amount']);
+  rows.push(['Total Cash', document.getElementById('calcTotalCash')?.textContent || 'ETB 0']);
+  rows.push(['Total CBE', document.getElementById('calcTotalCBE')?.textContent || 'ETB 0']);
+  rows.push(['Total Telebirr', document.getElementById('calcTotalTelebirr')?.textContent || 'ETB 0']);
+  rows.push(['Total BOA', document.getElementById('calcTotalBOA')?.textContent || 'ETB 0']);
+  rows.push(['Total Other Transfers', document.getElementById('calcTotalOther')?.textContent || 'ETB 0']);
+  rows.push(['Total Waiting Payments', document.getElementById('calcTotalWaiting')?.textContent || 'ETB 0']);
+  rows.push(['Grand Total Received', document.getElementById('calcGrandTotal')?.textContent || 'ETB 0']);
+  rows.push(['Total Sales', document.getElementById('calcTotalSales')?.textContent || 'ETB 0']);
+  rows.push(['Net Profit', document.getElementById('calcNetProfit')?.textContent || 'ETB 0']);
+  rows.push(['']);
+  rows.push(['Date', 'Invoice', 'Salesman', 'Payment Method', 'Transfer Type', 'Amount', 'PID', 'Reference No.', 'Status', 'Remark']);
+  
+  // Get table data
+  const table = document.querySelector('#calculationTableBody');
+  if (table) {
+    table.querySelectorAll('tr').forEach(row => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length > 0) {
+        rows.push([
+          cells[0]?.textContent || '',
+          cells[1]?.textContent || '',
+          cells[2]?.textContent || '',
+          cells[3]?.textContent || '',
+          cells[4]?.textContent || '',
+          cells[5]?.textContent || '',
+          cells[6]?.textContent || '',
+          cells[7]?.textContent || '',
+          cells[8]?.textContent || '',
+          cells[9]?.textContent || ''
+        ]);
+      }
+    });
+  }
+  
+  const csv = rows.map(r => r.map(c => `"${(c || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Calculation_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Report exported to CSV', 'success');
+}
+
+function printCalculation() {
+  window.print();
+  showToast('Printing calculation report', 'info');
+}
+
 function renderNotifications() {
   const list = state.notifications.slice().reverse();
   document.getElementById('notifCount').textContent = list.length;
@@ -690,8 +1281,14 @@ function openSaleModal(saleId = null) {
       <input type="number" name="tax" value="${sale?.tax || 15}" />
     </div>
     <div class="row">
-      <select name="paymentMethod"><option value="Cash">Cash</option><option value="CBE">CBE</option><option value="Telebirr">Telebirr</option><option value="BOA">BOA</option><option value="Other">Other</option></select>
-      <select name="status"><option value="Completed">Completed</option><option value="Pending">Pending</option><option value="Cancelled">Cancelled</option></select>
+      <select name="paymentMethod" id="salePaymentMethod" onchange="toggleSaleTransferFields()"><option value="Cash" ${sale?.paymentMethod === 'Cash' ? 'selected' : ''}>Cash</option><option value="CBE" ${sale?.paymentMethod === 'CBE' ? 'selected' : ''}>CBE Transfer</option><option value="Telebirr" ${sale?.paymentMethod === 'Telebirr' ? 'selected' : ''}>Telebirr</option><option value="BOA" ${sale?.paymentMethod === 'BOA' ? 'selected' : ''}>BOA Transfer</option><option value="Other" ${sale?.paymentMethod === 'Other' ? 'selected' : ''}>Other Transfer</option></select>
+      <select name="status"><option value="Completed" ${sale?.status === 'Completed' ? 'selected' : ''}>Completed</option><option value="Pending" ${sale?.status === 'Pending' ? 'selected' : ''}>Pending</option><option value="Cancelled" ${sale?.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option></select>
+    </div>
+    <div id="saleTransferFields" class="${sale?.paymentMethod && sale?.paymentMethod !== 'Cash' ? '' : 'hidden'}">
+      <div class="row">
+        <input name="transferType" id="saleTransferType" value="${sale?.transferType || ''}" placeholder="Transfer Type (e.g., CBE, Telebirr)" />
+        <input name="referenceNumber" id="saleReferenceNumber" value="${sale?.referenceNumber || ''}" placeholder="Reference/Transaction Number" />
+      </div>
     </div>
     <textarea name="remarks" placeholder="Remarks">${sale?.remarks || ''}</textarea>`;
   openModal(sale ? 'Edit Sale' : 'Create Sale', html, (formData) => {
@@ -712,6 +1309,8 @@ function openSaleModal(saleId = null) {
       status: payload.status || 'Completed',
       createdAt: new Date().toISOString(),
       paymentMethod: payload.paymentMethod || 'Cash',
+      transferType: payload.transferType || '',
+      referenceNumber: payload.referenceNumber || '',
       subtotal,
       tax: (subtotal * tax) / 100,
       discount,
@@ -732,7 +1331,7 @@ function openSaleModal(saleId = null) {
         product.availableQuantity = product.currentQuantity - product.reservedQuantity;
         product.status = product.currentQuantity <= 0 ? 'Out of Stock' : product.currentQuantity <= product.minStock ? 'Low Stock' : 'In Stock';
         state.inventoryHistory.push({ date: new Date().toISOString().slice(0,10), time: new Date().toTimeString().slice(0,5), user: currentUser?.name || 'system', product: product.name, action: 'Sale', quantity, previousBalance: product.currentQuantity + quantity, newBalance: product.currentQuantity, remarks: 'Completed sale' });
-        state.payments.push({ id: uid('PAY'), invoiceNumber, amount: grandTotal, method: payload.paymentMethod || 'Cash', date: new Date().toISOString().slice(0,10), remarks: 'Sale payment' });
+        state.payments.push({ id: uid('PAY'), invoiceNumber, amount: grandTotal, method: payload.paymentMethod || 'Cash', transferType: payload.transferType || '', referenceNumber: payload.referenceNumber || '', date: new Date().toISOString().slice(0,10), remarks: 'Sale payment' });
       } else if (payload.status === 'Pending') {
         state.pendingPayments.push({ id: uid('PP'), pid: uid('PID'), invoiceNumber, salesman: state.salesmen.find((salesman) => salesman.id === payload.salesmanId)?.name || 'N/A', pendingAmount: grandTotal, paidAmount: 0, remainingBalance: grandTotal, expectedDate: new Date().toISOString().slice(0,10), reminderDate: new Date().toISOString().slice(0,10), status: 'Waiting', remarks: 'Credit sale' });
       }
@@ -742,6 +1341,14 @@ function openSaleModal(saleId = null) {
     closeModal();
     renderAll();
   });
+}
+
+function toggleSaleTransferFields() {
+  const method = document.getElementById('salePaymentMethod')?.value;
+  const transferFields = document.getElementById('saleTransferFields');
+  if (transferFields) {
+    transferFields.classList.toggle('hidden', method === 'Cash');
+  }
 }
 
 function markSaleCompleted(saleId) {

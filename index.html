@@ -37,6 +37,7 @@
           <button class="nav-item" data-section="inventory">Inventory</button>
           <button class="nav-item" data-section="sales">Sales</button>
           <button class="nav-item" data-section="payments">Payments</button>
+          <button class="nav-item" data-section="calculation">📊 Calculation</button>
           <button class="nav-item" data-section="suppliers">Suppliers</button>
           <button class="nav-item" data-section="salesmen">Salesmen</button>
           <button class="nav-item" data-section="reports">Reports</button>
@@ -211,6 +212,172 @@
             </div>
           </div>
         </section>-->
+
+        <section class="content-section" id="calculation">
+          <div class="section-head">
+            <div>
+              <h2>Calculation & Reports</h2>
+              <p>View all sales and payment summaries with detailed breakdowns.</p>
+            </div>
+            <div class="section-actions">
+              <button class="secondary-btn" id="exportCalculationExcelBtn">📊 Export Excel</button>
+              <button class="secondary-btn" id="exportCalculationCSVBtn">📄 Export CSV</button>
+              <button class="secondary-btn" id="printCalculationBtn">🖨 Print</button>
+            </div>
+          </div>
+
+          <!-- Date Filter Bar -->
+          <div class="panel date-filter-bar">
+            <h3>Filter by Period</h3>
+            <div class="quick-filters">
+              <button class="quick-filter-btn" data-filter="today" onclick="setDateFilter('today')">Today</button>
+              <button class="quick-filter-btn" data-filter="yesterday" onclick="setDateFilter('yesterday')">Yesterday</button>
+              <button class="quick-filter-btn" data-filter="thisWeek" onclick="setDateFilter('thisWeek')">This Week</button>
+              <button class="quick-filter-btn" data-filter="thisMonth" onclick="setDateFilter('thisMonth')">This Month</button>
+              <button class="quick-filter-btn" data-filter="thisYear" onclick="setDateFilter('thisYear')">This Year</button>
+              <button class="quick-filter-btn active" data-filter="allTime" onclick="setDateFilter('allTime')">All Time</button>
+              <button class="quick-filter-btn" data-filter="custom" onclick="setDateFilter('custom')">Custom Range</button>
+            </div>
+            <div id="customDateRange" class="custom-date-range hidden">
+              <div class="date-range-inputs">
+                <div class="filter-group">
+                  <label>Start Date</label>
+                  <input type="date" id="calcCustomDateFrom" onchange="setCustomDateRange()" />
+                </div>
+                <div class="filter-group">
+                  <label>End Date</label>
+                  <input type="date" id="calcCustomDateTo" onchange="setCustomDateRange()" />
+                </div>
+              </div>
+            </div>
+            <div class="report-period-display">
+              <span class="report-period-label">Report Period:</span>
+              <span class="report-period-value" id="reportPeriodDisplay">All Time</span>
+            </div>
+          </div>
+          
+          <!-- Summary Cards -->
+          <div class="cards-grid calculation-cards" id="calculationSummaryCards">
+            <div class="card summary-card cash">
+              <div class="card-icon">💵</div>
+              <div class="label">Total Cash</div>
+              <div class="value" id="calcTotalCash">ETB 0</div>
+            </div>
+            <div class="card summary-card cbe">
+              <div class="card-icon">🏦</div>
+              <div class="label">Total CBE</div>
+              <div class="value" id="calcTotalCBE">ETB 0</div>
+            </div>
+            <div class="card summary-card telebirr">
+              <div class="card-icon">📱</div>
+              <div class="label">Total Telebirr</div>
+              <div class="value" id="calcTotalTelebirr">ETB 0</div>
+            </div>
+            <div class="card summary-card boa">
+              <div class="card-icon">🏛</div>
+              <div class="label">Total BOA</div>
+              <div class="value" id="calcTotalBOA">ETB 0</div>
+            </div>
+            <div class="card summary-card other">
+              <div class="card-icon">🔄</div>
+              <div class="label">Total Other Transfers</div>
+              <div class="value" id="calcTotalOther">ETB 0</div>
+            </div>
+            <div class="card summary-card waiting">
+              <div class="card-icon">⏳</div>
+              <div class="label">Total Waiting Payments</div>
+              <div class="value" id="calcTotalWaiting">ETB 0</div>
+            </div>
+            <div class="card summary-card grand-total">
+              <div class="card-icon">💰</div>
+              <div class="label">Grand Total Received</div>
+              <div class="value" id="calcGrandTotal">ETB 0</div>
+            </div>
+            <div class="card summary-card sales">
+              <div class="card-icon">📈</div>
+              <div class="label">Total Sales</div>
+              <div class="value" id="calcTotalSales">ETB 0</div>
+            </div>
+            <div class="card summary-card profit">
+              <div class="card-icon">✅</div>
+              <div class="label">Net Profit</div>
+              <div class="value" id="calcNetProfit">ETB 0</div>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="panel">
+            <h3>Filter Transactions</h3>
+            <div class="filter-row">
+              <div class="filter-group">
+                <label>Search</label>
+                <input type="text" id="calcSearchInput" placeholder="Search by invoice, reference..." />
+              </div>
+              <div class="filter-group">
+                <label>Payment Method</label>
+                <select id="calcMethodFilter">
+                  <option value="all">All Methods</option>
+                  <option value="Cash">Cash</option>
+                  <option value="CBE">CBE Transfer</option>
+                  <option value="Telebirr">Telebirr</option>
+                  <option value="BOA">BOA Transfer</option>
+                  <option value="Other">Other</option>
+                  <option value="Waiting">Waiting</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Status</label>
+                <select id="calcStatusFilter">
+                  <option value="all">All Status</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label>Sort By</label>
+                <select id="calcSortBy">
+                  <option value="date-desc">Newest First</option>
+                  <option value="date-asc">Oldest First</option>
+                  <option value="amount-desc">Highest Amount</option>
+                  <option value="amount-asc">Lowest Amount</option>
+                  <option value="method">Payment Method</option>
+                  <option value="salesman">Salesman</option>
+                  <option value="invoice-asc">Invoice (A-Z)</option>
+                  <option value="invoice-desc">Invoice (Z-A)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction Table -->
+          <div class="panel">
+            <h3>Transaction Details</h3>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Invoice</th>
+                    <th>Salesman</th>
+                    <th>Payment Method</th>
+                    <th>Transfer Type</th>
+                    <th>Amount</th>
+                    <th>PID</th>
+                    <th>Reference No.</th>
+                    <th>Status</th>
+                    <th>Remark</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="calculationTableBody"></tbody>
+              </table>
+            </div>
+            <div class="table-footer" id="calculationTableFooter">
+              <span id="calcEntriesCount">Showing 0 entries</span>
+            </div>
+          </div>
+        </section>
 
         <section class="content-section" id="suppliers">
           <div class="section-head">
